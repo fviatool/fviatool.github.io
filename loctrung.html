@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Lọc Dữ Liệu Nhanh</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f2f5; padding: 20px; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
+        h2 { text-align: center; color: #1877f2; }
+        textarea, input, button { width: 100%; margin-bottom: 10px; padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ddd; }
+        button { background: #1877f2; color: white; font-weight: bold; cursor: pointer; border: none; }
+        button:hover { background: #0d6efd; }
+        .result-box { margin-top: 15px; padding: 10px; border-radius: 5px; font-weight: bold; }
+        .live { background-color: #d4edda; color: #155724; }
+        .dead { background-color: #f8d7da; color: #721c24; }
+    </style>
+       <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container { margin-top: 20px; }
+        .progress { height: 20px; }
+    </style>
+</head>
+<body>
+<div class="text-center shadow p-4 bg-white">
+        <h2 class="text-center">🔍 Lọc Trùng Data</h2>
+<br>
+    <!-- Nhập dữ liệu -->
+    <textarea id="rawData" class="form-control" rows="5" placeholder="Nhập dữ liệu hoặc tải từ file"></textarea>
+    <br>
+
+    <!-- Nút tải file và xử lý -->
+    <input type="file" id="fileInput" accept=".txt" multiple hidden>
+    <button onclick="document.getElementById('fileInput').click()" class="btn btn-primary">📂 Chọn File</button>
+    <button onclick="processData()" class="btn btn-success">🔍 Lọc Dữ Liệu</button>
+    <button onclick="clearData()" class="btn btn-danger">🗑 Xóa Dữ Liệu</button>
+    
+    <br><br>
+
+    <!-- Tiến trình -->
+    <div class="progress">
+        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
+    </div>
+    
+    <br>
+    
+    <h2>Dữ Liệu Đã Lọc:</h2>
+    <textarea id="uniqueData" class="form-control" rows="5" placeholder="Dữ liệu không trùng lặp..."></textarea>
+    <button onclick="copyToClipboard('uniqueData')" class="btn btn-secondary">📋 Copy</button>
+    <button onclick="downloadFile('uniqueData', 'unique_data.txt')" class="btn btn-info">📥 Tải Xuống</button>
+
+    <br><br>
+
+    <h2>Dữ Liệu Trùng Lặp:</h2>
+    <textarea id="duplicateData" class="form-control" rows="5" placeholder="Dữ liệu trùng lặp..."></textarea>
+    <button onclick="copyToClipboard('duplicateData')" class="btn btn-secondary">📋 Copy</button>
+    <button onclick="downloadFile('duplicateData', 'duplicate_data.txt')" class="btn btn-info">📥 Tải Xuống</button>
+
+    <br><br>
+
+    <p id="totalData">Tổng dữ liệu: 0</p>
+</div>
+
+<script>
+    let allData = [];
+
+    // Xử lý file tải lên
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+        const files = event.target.files;
+        let readers = [];
+
+        for (let file of files) {
+            let reader = new FileReader();
+            reader.readAsText(file);
+            readers.push(new Promise((resolve) => {
+                reader.onload = function(e) {
+                    allData.push(...e.target.result.split('\n'));
+                    resolve();
+                };
+            }));
+        }
+
+        Promise.all(readers).then(() => {
+            document.getElementById("rawData").value = allData.join('\n');
+        });
+    });
+
+    // Lọc dữ liệu và cập nhật giao diện
+    function processData() {
+        const rawData = document.getElementById("rawData").value.split('\n');
+        const total = rawData.length;
+        let uniqueSet = new Set();
+        let duplicates = [];
+
+        rawData.forEach((line, index) => {
+            if (uniqueSet.has(line)) {
+                duplicates.push(line);
+            } else {
+                uniqueSet.add(line);
+            }
+            updateProgress((index + 1) / total * 100);
+        });
+
+        document.getElementById("uniqueData").value = Array.from(uniqueSet).join("\n");
+        document.getElementById("duplicateData").value = duplicates.join("\n");
+        document.getElementById("totalData").textContent = `Tổng dữ liệu: ${total}`;
+        updateProgress(100);
+    }
+
+    // Xóa dữ liệu
+    function clearData() {
+        document.getElementById("rawData").value = "";
+        document.getElementById("uniqueData").value = "";
+        document.getElementById("duplicateData").value = "";
+        document.getElementById("totalData").textContent = "Tổng dữ liệu: 0";
+        updateProgress(0);
+    }
+
+    // Cập nhật thanh tiến trình
+    function updateProgress(value) {
+        let progressBar = document.getElementById("progressBar");
+        progressBar.style.width = value + "%";
+        progressBar.textContent = Math.round(value) + "%";
+    }
+
+    // Copy dữ liệu vào clipboard
+    function copyToClipboard(id) {
+        let textarea = document.getElementById(id);
+        textarea.select();
+        document.execCommand("copy");
+        alert("Đã sao chép vào clipboard!");
+    }
+
+    // Tải xuống file
+    function downloadFile(id, filename) {
+        let content = document.getElementById(id).value;
+        let blob = new Blob([content], { type: "text/plain" });
+        let a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+</script>
+
+</body>
+</html>
