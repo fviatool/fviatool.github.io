@@ -17,9 +17,9 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="text-container">
     <h2 class="text-center text-primary">LỌC UID FACEBOOK SIÊU TỐC</h2>
-    <textarea id="uidInput" rows="5" class="form-control" placeholder="Nhập danh sách UID.." oninput="toggleClearButton(); checkUIDs()"></textarea>
+    <textarea id="uidInput" rows="5" class="form-control" placeholder="Nhập danh sách UID.." oninput="toggleClearButton(); checkUIDs();"></textarea>
     <br>
     <div class="d-flex justify-content-between">
       <div class="form-group mb-0">
@@ -102,31 +102,42 @@
 
     async function checkUIDs() {
       let raw = document.getElementById("uidInput").value.split("\n").map(e => e.trim()).filter(e => e);
-      let uids = [...new Set(raw)];
+      let lines = [...new Set(raw)];
       let batchSize = parseInt(document.getElementById("batchSize").value);
-      let live = [], dead = [], total = uids.length;
+      let live = [], dead = [], total = lines.length;
+      let liveCount = 0, deadCount = 0;
+
       document.getElementById("loading").style.display = "block";
+
       for (let i = 0; i < total; i += batchSize) {
-        let batch = uids.slice(i, i + batchSize);
-        await Promise.all(batch.map(async line => {
-          let uid = line.split('|')[0].trim();
+        let batch = lines.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (line) => {
+          let parts = line.split('|');
+          let uid = parts[0];
+
+          if (live.includes(uid) || dead.includes(uid)) return;
+
           try {
             let res = await fetch(`https://graph.facebook.com/${uid}/picture?type=normal`);
             if (res.ok && !res.url.includes("/static")) {
-              live.push(line);
+              document.getElementById('ListLive').value += line + "\n";
+              document.getElementById('countLive').textContent = ++liveCount;
+              live.push(uid);
             } else {
-              dead.push(line);
+              document.getElementById('ListDead').value += line + "\n";
+              document.getElementById('countDead').textContent = ++deadCount;
+              dead.push(uid);
             }
-          } catch (_) {
-            dead.push(line);
+          } catch (error) {
+            console.error(`Lỗi kiểm tra UID ${uid}:`, error);
+            document.getElementById('ListDead').value += line + " (Lỗi kết nối)\n";
+            document.getElementById('countDead').textContent = ++deadCount;
+            dead.push(uid);
           }
         }));
         updateProgress((i + batch.length) / total * 100);
       }
-      document.getElementById("ListLive").value = live.join("\n");
-      document.getElementById("ListDead").value = dead.join("\n");
-      document.getElementById("countLive").textContent = live.length;
-      document.getElementById("countDead").textContent = dead.length;
+
       document.getElementById("loading").style.display = "none";
     }
 
