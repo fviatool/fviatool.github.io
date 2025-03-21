@@ -16,10 +16,10 @@
   </style>
 </head>
 <body>
-<div class="container">
+<div class="text-container">
   <h3 class="text-center">LỌC TRÙNG DỮ LIỆU TEXT</h3>
 
-  <textarea id="rawData" rows="5" placeholder="Nhập hoặc tải dữ liệu..." oninput="processData()"></textarea>
+  <textarea id="rawData" rows="4" placeholder="Nhập hoặc tải dữ liệu..." oninput="processData()"></textarea>
   <div class="mb-2">
     <button onclick="loadFile()" class="btn btn-primary">📂 Chọn file</button>
     <button onclick="clearData()" class="btn btn-danger">🗑 Xóa dữ liệu</button>
@@ -35,7 +35,7 @@
   <progress id="progressBar" value="0" max="100" class="progress w-100 mb-4"></progress>
 
   <h3 class="text-center">LỌC KÝ TỰ CHỨA / KHÔNG CHỨA</h3>
-  <textarea id="filterText" rows="2" placeholder="Từ khóa lọc (mỗi dòng 1 từ)"></textarea>
+  <textarea id="filterText" rows="4" placeholder="Từ khóa lọc (mỗi dòng 1 từ)"></textarea>
   <div class="mb-2">
     <button class="btn btn-info" onclick="filterContains()">Lọc chứa</button>
     <button class="btn btn-warning" onclick="filterNotContains()">Lọc không chứa</button>
