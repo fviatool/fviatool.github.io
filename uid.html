@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lọc UID Facebook - Nhanh và Mượt</title>
+  <title>Lọc UID Facebook</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <style>
     body { background: #f0f2f5; }
@@ -18,7 +18,7 @@
 </head>
 <body>
   <div class="text-container">
-    <h2 class="text-center text-primary">LỌC UID FACEBOOK SIÊU TỐC</h2>
+    <h2 class="text-center text-primary">LỌC UID FACEBOOK</h2>
     <textarea id="uidInput" rows="5" class="form-control" placeholder="Nhập danh sách UID.." oninput="toggleClearButton(); checkUIDs();"></textarea>
     <br>
     <div class="d-flex justify-content-between">
@@ -34,7 +34,7 @@
         </select>
       </div>
       <div>
-        <button class="btn btn-success" onclick="checkUIDs()">✅ Kiểm tra UID</button>
+        <button class="btn btn-success" onclick="checkUIDs()">✅ Check UID</button> <br>
         <button class="btn btn-danger" id="clearBtn" onclick="clearAll()">🗑 Xoá All</button>
       </div>
     </div>
@@ -51,8 +51,7 @@
       <button class="btn btn-warning" onclick="mapText()">🔎 Lọc chuỗi nâng cao</button>
     </div>
     <div class="form-group">
-      <label>Kết quả sau khi lọc:</label>
-      <textarea id="filteredOutput" class="form-control" rows="5" readonly></textarea>
+      <textarea id="filteredOutput" class="form-control" rows="3" placeholder="Kết quả sau khi lọc..."></textarea>
     </div>
     <p id="loading">⏳ Đang xử lý...</p>
     <div class="progress mb-3">
