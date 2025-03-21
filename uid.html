@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facebook UID Live Checker</title>
     <style>
-        /* Giao diện giống Facebook */
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f2f5;
@@ -13,31 +13,35 @@
             padding: 0;
             text-align: center;
         }
+
         .container {
-            width: 80%;
-            max-width: 600px;
+            width: 90%;
+            max-width: 700px;
             margin: 30px auto;
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
+
         h1 {
             color: #1877f2;
-            font-size: 24px;
+            font-size: 26px;
         }
-        textarea, input, button {
+
+        textarea,
+        input,
+        button,
+        select {
             width: 100%;
             padding: 10px;
             font-size: 16px;
             margin-bottom: 10px;
             border-radius: 5px;
-            border: 1px solid #ddd;
+            border: 1px solid #ccc;
             outline: none;
         }
-        input[type="file"] {
-            border: none;
-        }
+
         button {
             background: #1877f2;
             color: white;
@@ -45,74 +49,94 @@
             cursor: pointer;
             font-weight: bold;
         }
+
         button:hover {
             background: #0d6efd;
         }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
         #results {
             display: flex;
             flex-direction: column;
             margin-top: 20px;
         }
+
         .box {
             width: 100%;
             padding: 10px;
             border-radius: 5px;
             text-align: left;
             background: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
             margin-bottom: 10px;
         }
-        .live { background-color: #d4edda; color: #155724; }
-        .dead { background-color: #f8d7da; color: #721c24; }
-        .btn-danger { background: #dc3545; }
-        .btn-danger:hover { background: #c82333; }
-        #copyButton { display: none; }
-        #loading { color: red; font-weight: bold; display: none; }
+
+        .live {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .dead {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        #loading {
+            color: #ff5722;
+            font-weight: bold;
+            display: none;
+            animation: pulse 1.2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
     </style>
 </head>
-<body>
-    <style>
-        body { background-color: #f8f9fa; }
-        .container { max-width: 600px; margin-top: 50px; }
-        textarea { resize: none; }
-        .live-proxy { color: green; font-weight: bold; }
-        .die-proxy { color: red; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <div class="text-cetner">
-        <h2 class="text-center mb-4">🔍 Checker UID Live</h2>
 
-        <div class="mb-3">
-
+<body>
+    <div class="container">
+        <h1>Facebook UID Live Checker</h1>
         <input type="file" id="fileInput" accept=".txt">
-        <textarea id="uidInput" placeholder="Nhập danh sách UID..." rows="5"></textarea>
+        <textarea id="uidInput" placeholder="Nhập hoặc tải UID..." rows="4"></textarea>
+        <select id="batchSize">
+            <option value="500">Batch 500</option>
+            <option value="1000" selected>Batch 1000</option>
+        </select>
+        <button onclick="checkUIDs()">🔍 Kiểm tra UID</button>
+        <button onclick="clearAll()" class="btn-danger">🧹 Xóa tất cả</button>
+        <button onclick="copyLiveUIDs()" id="copyButton" style="display:none">📋 Copy Live</button>
 
-        <button onclick="checkUIDs()">🔄 Kiểm tra lại</button>
-        <button onclick="clearAll()" class="btn-danger">❌ Xóa All</button>
-        <button onclick="copyLiveUIDs()" id="copyButton">📋 Copy Live UIDs</button>
-
-        <p id="loading">⏳ Đang kiểm tra... Vui lòng chờ!</p>
+        <p id="loading">⏳ Đang check uid...</p>
 
         <div id="results">
             <div class="box live">
-                <h3>✅ Live UIDs (<span id="countLive">0</span>)</h3>
+                <h3>✅ Live UID (<span id="countLive">0</span>)</h3>
                 <textarea id="ListLive" rows="5" readonly></textarea>
             </div>
             <div class="box dead">
-                <h3>❌ Dead UIDs (<span id="countDead">0</span>)</h3>
+                <h3>❌ Dead UID (<span id="countDead">0</span>)</h3>
                 <textarea id="ListDead" rows="5" readonly></textarea>
             </div>
         </div>
     </div>
 
     <script>
-        document.getElementById('fileInput').addEventListener('change', function(event) {
-            const file = event.target.files[0];
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                document.getElementById('uidInput').value += e.target.result + "\n";
+                document.getElementById('uidInput').value += '\n' + e.target.result;
                 checkUIDs();
             };
             reader.readAsText(file);
@@ -128,63 +152,53 @@
         }
 
         async function checkUIDs() {
-            let uidList = document.getElementById('uidInput').value.trim().split("\n").map(uid => uid.trim()).filter(uid => uid);
-            if (uidList.length === 0) return;
+            const rawUIDs = document.getElementById('uidInput').value.trim().split("\n").map(e => e.trim());
+            const uidList = [...new Set(rawUIDs)].filter(uid => uid);
+            const batchSize = parseInt(document.getElementById("batchSize").value);
 
-            document.getElementById('loading').style.display = "block";
+            let liveCount = 0;
+            let deadCount = 0;
+            let liveUIDs = [];
+            let deadUIDs = [];
 
-            let liveCount = parseInt(document.getElementById('countLive').textContent);
-            let deadCount = parseInt(document.getElementById('countDead').textContent);
-            let existingLive = document.getElementById('ListLive').value.split("\n").filter(uid => uid.trim());
-            let existingDead = document.getElementById('ListDead').value.split("\n").filter(uid => uid.trim());
+            document.getElementById("loading").style.display = "block";
 
-            const batchSize = 1000;
-
-            function processBatch(batch, index) {
-                let requests = batch.map(async (line) => {
-                    let parts = line.split('|');
-                    let uid = parts[0];
-
-                    if (existingLive.includes(uid) || existingDead.includes(uid)) return;
-
+            for (let i = 0; i < uidList.length; i += batchSize) {
+                const batch = uidList.slice(i, i + batchSize);
+                await Promise.all(batch.map(async uid => {
                     try {
-                        let response = await fetch(`https://graph.facebook.com/${uid}/picture?type=normal`);
-                        if (response.ok && !response.url.includes("//static")) {
-                            document.getElementById('ListLive').value += line + "\n";
-                            document.getElementById('countLive').textContent = ++liveCount;
+                        const res = await fetch(`https://graph.facebook.com/${uid}/picture?type=normal`);
+                        if (res.ok && !res.url.includes("/static")) {
+                            liveUIDs.push(uid);
+                            liveCount++;
                         } else {
-                            document.getElementById('ListDead').value += line + "\n";
-                            document.getElementById('countDead').textContent = ++deadCount;
+                            deadUIDs.push(uid);
+                            deadCount++;
                         }
-                    } catch (error) {
-                        console.error(`Lỗi kiểm tra UID ${uid}:`, error);
-                        document.getElementById('ListDead').value += line + " (Lỗi kết nối)\n";
-                        document.getElementById('countDead').textContent = ++deadCount;
+                    } catch (err) {
+                        deadUIDs.push(uid);
+                        deadCount++;
                     }
-                });
-
-                Promise.all(requests).then(() => {
-                    if (index < uidList.length) {
-                        setTimeout(() => processBatch(uidList.splice(0, batchSize), index + batchSize), 50);
-                    } else {
-                        document.getElementById('loading').style.display = "none";
-                        alert("✅ Kiểm tra hoàn tất!");
-                        if (liveCount > 0) document.getElementById('copyButton').style.display = "inline-block";
-                    }
-                });
+                }));
             }
 
-            processBatch(uidList.splice(0, batchSize), 0);
+            document.getElementById("ListLive").value = liveUIDs.join("\n");
+            document.getElementById("ListDead").value = deadUIDs.join("\n");
+            document.getElementById("countLive").textContent = liveCount;
+            document.getElementById("countDead").textContent = deadCount;
+            document.getElementById("loading").style.display = "none";
+
+            if (liveCount > 0) {
+                document.getElementById("copyButton").style.display = "inline-block";
+            }
         }
 
         function copyLiveUIDs() {
-            let liveUIDs = document.getElementById('ListLive').value;
-            if (!liveUIDs.trim()) {
-                alert("Không có UID nào để sao chép.");
-                return;
-            }
-            navigator.clipboard.writeText(liveUIDs).then(() => alert("✅ Đã sao chép Live UIDs!"));
+            const text = document.getElementById("ListLive").value;
+            if (!text) return alert("Không có UID để sao chép.");
+            navigator.clipboard.writeText(text).then(() => alert("✅ Đã sao chép UID sống."));
         }
     </script>
 </body>
+
 </html>
