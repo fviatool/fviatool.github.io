@@ -24,13 +24,13 @@
     <button onclick="loadFile()" class="btn btn-primary">📂 Chọn file</button>
     <button onclick="clearData()" class="btn btn-danger">🗑 Xóa dữ liệu</button>
   </div>
-
+  <button class="btn btn-secondary btn-sm mb-3" onclick="copyText('uniqueData')">📋 Copy dữ liệu không trùng</button>
   <label><strong>Dữ liệu đã lọc trùng:</strong></label>
   <textarea id="uniqueData" rows="4" readonly></textarea>
 
   <label><strong>Dữ liệu trùng lặp:</strong></label>
   <textarea id="duplicateData" rows="4" readonly></textarea>
-
+  <button class="btn btn-secondary btn-sm mb-3" onclick="copyText('duplicateData')">📋 Copy dữ liệu trùng</button>
   <p id="totalData">Tổng dữ liệu: 0</p>
   <progress id="progressBar" value="0" max="100" class="progress w-100 mb-4"></progress>
 
@@ -44,6 +44,7 @@
   <label><strong>Kết quả lọc:</strong></label>
   <pre id="result" style="height: 200px; overflow-y: auto;"></pre>
   <p id="message" class="text-success"></p>
+  <button class="btn btn-secondary btn-sm mb-3" onclick="copyText('result')">📋 Copy kết quả lọc ký tự</button>
 </div>
 
 <script>
@@ -132,6 +133,17 @@
     document.getElementById('result').textContent = result.join('\n');
     document.getElementById('message').textContent = `Số dòng sau khi lọc: ${result.length}`;
   }
+  
+  function copyText(id) {
+  const el = document.getElementById(id);
+  if (!el.value && !el.textContent) return alert("Không có nội dung để sao chép!");
+  const text = el.value || el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    alert("✅ Đã sao chép nội dung!");
+  }).catch(() => {
+    alert("❌ Không thể sao chép!");
+  });
+}
 </script>
 </body>
 </html>
