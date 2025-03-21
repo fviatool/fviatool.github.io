@@ -2,183 +2,136 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Lọc Trùng</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" crossorigin="anonymous">
-    <script src="//code.jquery.com/jquery.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" crossorigin="anonymous"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lọc Trùng & Ký Tự</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f2f5; padding: 20px; }
-        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
-        h2 { text-align: center; color: #1877f2; }
-        textarea, input, button { width: 100%; margin-bottom: 10px; padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ddd; }
-        button { background: #1877f2; color: white; font-weight: bold; cursor: pointer; border: none; }
-        button:hover { background: #0d6efd; }
-        .result-box { margin-top: 15px; padding: 10px; border-radius: 5px; font-weight: bold; }
-        .live { background-color: #d4edda; color: #155724; }
-        .dead { background-color: #f8d7da; color: #721c24; }
-    </style>
-
+    body { font-family: Arial, sans-serif; background-color: #f0f2f5; padding: 20px; }
+    .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 800px; margin: auto; }
+    h3 { color: #1877f2; }
+    textarea { width: 100%; margin-bottom: 10px; padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ddd; resize: vertical; }
+    button { margin-bottom: 10px; }
+    pre { background: #f8f9fa; padding: 10px; border-radius: 5px; }
+  </style>
 </head>
-
 <body>
-    <div class="text-container">
-            <div class="panel panel-primary">
-                <div class="panel-heading">
-                    <h3 class="panel-title">LỌC TRÙNG DỮ LIỆU TEXT</h3>
-                </div>
-                <div class="panel-body">
-                    <div class="form-group">
-                        <textarea id="rawData" rows="5" oninput="processData()" class="form-control"></textarea>
-                        <br>
-                        <button onclick="loadFile()" class="btn btn-primary">Chọn file</button>
-                        <button onclick="clearData()" class="btn btn-danger">Xóa dữ liệu</button>
-                        <br>
-                        <textarea id="uniqueData" rows="3" class="form-control" placeholder="Dữ Liệu Đã Lọc Trùng..."></textarea>
-                        <br>
-                        <textarea id="duplicateData" rows="3" class="form-control" placeholder="Dữ Liệu Trùng Lặp..."></textarea>
-                        <p id="totalData">Tổng dữ liệu: 0</p>
-                        <progress id="progressBar" value="0" max="100" class="progress"></progress>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="container">
+  <h3 class="text-center">LỌC TRÙNG DỮ LIỆU TEXT</h3>
 
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h3 class="panel-title">Lọc Ký Tự Chứa/Không Chứa</h3>
-            </div>
-            <div class="panel-body">
-                <textarea id="inputText" rows="3" class="form-control" placeholder="Nhập dữ liệu để lọc..."></textarea>
-                <textarea id="filterText" rows="3" class="form-control" placeholder="Từ khóa lọc..."></textarea>
-                <br>
-                <button onclick="filterContains()" class="btn btn-info">Lọc chứa</button>
-                <button onclick="filterNotContains()" class="btn btn-warning">Lọc không chứa</button>
-                <br><br>
-                <pre id="result" class="form-control" style="height: 200px; overflow-y: scroll;"></pre>
-                <p id="message" class="text-success"></p>
-            </div>
-        </div>
-    </div>
+  <textarea id="rawData" rows="5" placeholder="Nhập hoặc tải dữ liệu..." oninput="processData()"></textarea>
+  <div class="mb-2">
+    <button onclick="loadFile()" class="btn btn-primary">📂 Chọn file</button>
+    <button onclick="clearData()" class="btn btn-danger">🗑 Xóa dữ liệu</button>
+  </div>
 
-    <script>
-        let worker;
+  <label><strong>Dữ liệu đã lọc trùng:</strong></label>
+  <textarea id="uniqueData" rows="4" readonly></textarea>
 
-        function processData() {
-            document.getElementById("totalData").textContent = "Tổng dữ liệu: 0";
-            clearResults();
-            document.getElementById("progressBar").value = 0;
-            const data = document.getElementById("rawData").value;
-            if (worker) worker.terminate();
-            worker = new Worker(URL.createObjectURL(new Blob([`
-                self.onmessage = function (e) {
-                    const data = e.data.split('\n');
-                    const unique = [...new Set(data.filter(line => line.trim() !== ''))];
-                    const duplicates = data.filter((item, index) => data.indexOf(item) !== index);
-                    postMessage({ uniqueLines: unique, duplicates, totalLines: data.length });
-                };
-            `], { type: "application/javascript" })));
-            worker.postMessage(data);
-            worker.onmessage = function (event) {
-                const { uniqueLines, duplicates, totalLines } = event.data;
-                document.getElementById("totalData").textContent = `Tổng dữ liệu: ${totalLines}`;
-                updateDisplay(uniqueLines, duplicates);
-                document.getElementById("progressBar").value = 100;
-            };
+  <label><strong>Dữ liệu trùng lặp:</strong></label>
+  <textarea id="duplicateData" rows="4" readonly></textarea>
+
+  <p id="totalData">Tổng dữ liệu: 0</p>
+  <progress id="progressBar" value="0" max="100" class="progress w-100 mb-4"></progress>
+
+  <h3 class="text-center">LỌC KÝ TỰ CHỨA / KHÔNG CHỨA</h3>
+  <textarea id="filterText" rows="2" placeholder="Từ khóa lọc (mỗi dòng 1 từ)"></textarea>
+  <div class="mb-2">
+    <button class="btn btn-info" onclick="filterContains()">Lọc chứa</button>
+    <button class="btn btn-warning" onclick="filterNotContains()">Lọc không chứa</button>
+  </div>
+
+  <label><strong>Kết quả lọc:</strong></label>
+  <pre id="result" style="height: 200px; overflow-y: auto;"></pre>
+  <p id="message" class="text-success"></p>
+</div>
+
+<script>
+  let worker;
+
+  function processData() {
+    const data = document.getElementById("rawData").value;
+    if (!data.trim()) return;
+
+    document.getElementById("progressBar").value = 0;
+    document.getElementById("totalData").textContent = "Tổng dữ liệu: 0";
+    document.getElementById("uniqueData").value = "";
+    document.getElementById("duplicateData").value = "";
+
+    if (worker) worker.terminate();
+    worker = new Worker(URL.createObjectURL(new Blob([`
+      self.onmessage = function (e) {
+        const lines = e.data.split('\\n').map(l => l.trim()).filter(l => l);
+        const uniqueSet = new Set();
+        const unique = [], duplicate = [];
+        for (const line of lines) {
+          if (uniqueSet.has(line)) {
+            duplicate.push(line);
+          } else {
+            uniqueSet.add(line);
+            unique.push(line);
+          }
         }
+        postMessage({ uniqueLines: unique, duplicates: duplicate, totalLines: lines.length });
+      };
+    `], { type: 'application/javascript' })));
 
-        function updateDisplay(uniqueLines, duplicates) {
-            document.getElementById("uniqueData").textContent = uniqueLines.join("\n");
-            document.getElementById("duplicateData").textContent = duplicates.join("\n");
-        }
+    worker.postMessage(data);
+    worker.onmessage = function ({ data }) {
+      document.getElementById("uniqueData").value = data.uniqueLines.join('\n');
+      document.getElementById("duplicateData").value = data.duplicates.join('\n');
+      document.getElementById("totalData").textContent = `Tổng dữ liệu: ${data.totalLines}`;
+      document.getElementById("progressBar").value = 100;
+    };
+  }
 
-        function clearResults() {
-            document.getElementById("uniqueData").textContent = "";
-            document.getElementById("duplicateData").textContent = "";
-        }
+  function loadFile() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".txt";
+    input.onchange = function (e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        document.getElementById("rawData").value = ev.target.result;
+        processData();
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
 
-        function clearData() {
-            document.getElementById("rawData").value = "";
-            clearResults();
-            document.getElementById("totalData").textContent = "Tổng dữ liệu: 0";
-        }
+  function clearData() {
+    ['rawData', 'uniqueData', 'duplicateData'].forEach(id => document.getElementById(id).value = "");
+    document.getElementById("result").textContent = "";
+    document.getElementById("message").textContent = "";
+    document.getElementById("totalData").textContent = "Tổng dữ liệu: 0";
+    document.getElementById("progressBar").value = 0;
+    if (worker) worker.terminate();
+  }
 
-        function loadFile() {
-            const input = document.createElement("input");
-            input.type = "file";
-            input.accept = ".txt";
-            input.onchange = function (event) {
-                const file = event.target.files[0];
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    document.getElementById("rawData").value = e.target.result;
-                    processData();
-                };
-                reader.readAsText(file);
-            };
-            input.click();
-        }
+  function filterContains() {
+    filterLines(true);
+  }
 
-        function filterContains() {
-            const inputText = document.getElementById('inputText').value;
-            const filterText = document.getElementById('filterText').value;
-            const result = document.getElementById('result');
+  function filterNotContains() {
+    filterLines(false);
+  }
 
-            const worker = new Worker(URL.createObjectURL(new Blob([`
-                self.onmessage = function (e) {
-                    const { inputText, filterText, contains } = e.data;
-                    const inputLines = inputText.split('\n');
-                    const filterLines = filterText.split('\n');
-                    const resultLines = inputLines.filter(line => {
-                        return contains ? filterLines.some(f => line.toLowerCase().includes(f.toLowerCase()))
-                                          : !filterLines.some(f => line.toLowerCase().includes(f.toLowerCase()));
-                    });
-                    postMessage(resultLines.join('\n'));
-                };
-            `], { type: "application/javascript" })));
+  function filterLines(contains) {
+    const input = document.getElementById('uniqueData').value || document.getElementById('rawData').value;
+    const filters = document.getElementById('filterText').value.split('\n').map(t => t.trim().toLowerCase()).filter(Boolean);
+    if (!filters.length) return;
 
-            worker.onmessage = function (e) {
-                const resultText = e.data;
-                result.textContent = resultText;
-                showMessage(`Số dòng sau khi lọc: ${resultText.split('\n').length}`);
-            };
+    const lines = input.split('\n').map(l => l.trim());
+    const result = lines.filter(line => {
+      const lower = line.toLowerCase();
+      return contains ? filters.some(f => lower.includes(f)) : filters.every(f => !lower.includes(f));
+    });
 
-            worker.postMessage({ inputText, filterText, contains: true });
-        }
-
-        function filterNotContains() {
-            const inputText = document.getElementById('inputText').value;
-            const filterText = document.getElementById('filterText').value;
-            const result = document.getElementById('result');
-
-            const worker = new Worker(URL.createObjectURL(new Blob([`
-                self.onmessage = function (e) {
-                    const { inputText, filterText, contains } = e.data;
-                    const inputLines = inputText.split('\n');
-                    const filterLines = filterText.split('\n');
-                    const resultLines = inputLines.filter(line => {
-                        return contains ? filterLines.some(f => line.toLowerCase().includes(f.toLowerCase()))
-                                          : !filterLines.some(f => line.toLowerCase().includes(f.toLowerCase()));
-                    });
-                    postMessage(resultLines.join('\n'));
-                };
-            `], { type: "application/javascript" })));
-
-            worker.onmessage = function (e) {
-                const resultText = e.data;
-                result.textContent = resultText;
-                showMessage(`Số dòng sau khi lọc: ${resultText.split('\n').length}`);
-            };
-
-            worker.postMessage({ inputText, filterText, contains: false });
-        }
-
-        function showMessage(message) {
-            document.getElementById('message').textContent = message;
-        }
-    </script>
+    document.getElementById('result').textContent = result.join('\n');
+    document.getElementById('message').textContent = `Số dòng sau khi lọc: ${result.length}`;
+  }
+</script>
 </body>
-
 </html>
