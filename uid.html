@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lọc UID Facebook</title>
+  <title>Lọc UID Facebook - Nhanh và Mượt</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <style>
     body { background: #f0f2f5; }
-    .container { margin-top: 30px; max-width: 1000px; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+    .container { margin-top: 30px; max-width: 800px; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
     textarea { resize: vertical; }
     .progress { height: 20px; }
     .box { background: #e9ecef; padding: 15px; border-radius: 8px; margin-top: 15px; }
@@ -17,14 +17,14 @@
   </style>
 </head>
 <body>
-  <div class="text-container">
-    <h2 class="text-center text-primary">LỌC UID FACEBOOK</h2>
-    <textarea id="uidInput" rows="5" class="form-control" placeholder="Nhập danh sách UID.." oninput="toggleClearButton()"></textarea>
+  <div class="container">
+    <h2 class="text-center text-primary">LỌC UID FACEBOOK SIÊU TỐC</h2>
+    <textarea id="uidInput" rows="5" class="form-control" placeholder="Nhập danh sách UID.." oninput="toggleClearButton(); checkUIDs()"></textarea>
     <br>
     <div class="d-flex justify-content-between">
       <div class="form-group mb-0">
         <input type="file" id="fileInput" accept=".txt" hidden>
-        <button class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">📂 Open file</button>
+        <button class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">📂 Chọn file</button>
       </div>
       <div>
         <select id="batchSize" class="form-control">
@@ -34,12 +34,13 @@
         </select>
       </div>
       <div>
-        <button class="btn btn-success" onclick="checkUIDs()">✅ CHECK UID</button>
+        <button class="btn btn-success" onclick="checkUIDs()">✅ Kiểm tra UID</button>
         <button class="btn btn-danger" id="clearBtn" onclick="clearAll()">🗑 Xoá All</button>
       </div>
     </div>
     <br>
     <div class="form-group">
+      <label>Lọc dòng chứa một trong các từ:</label>
       <textarea id="map_have_text" class="form-control" rows="3" placeholder="Nhập từ cần chứa..."></textarea>
     </div>
     <div class="form-group">
@@ -47,11 +48,11 @@
       <textarea id="map_havenot_text" class="form-control" rows="3" placeholder="Nhập từ cần loại..."></textarea>
     </div>
     <div class="form-group">
-    <center>
-      <button class="btn btn-warning" onclick="mapText()">🔎 LỌC</button>
+      <button class="btn btn-warning" onclick="mapText()">🔎 Lọc chuỗi nâng cao</button>
     </div>
     <div class="form-group">
-      <textarea id="filteredOutput" class="form-control" rows="3" placeholder="Kết quả sau khi lọc"></textarea>
+      <label>Kết quả sau khi lọc:</label>
+      <textarea id="filteredOutput" class="form-control" rows="5" readonly></textarea>
     </div>
     <p id="loading">⏳ Đang xử lý...</p>
     <div class="progress mb-3">
@@ -59,12 +60,12 @@
     </div>
     <div class="box">
       <h5>✅ UID Sống (<span id="countLive">0</span>)</h5>
-      <textarea id="ListLive" class="form-control" rows="3" readonly></textarea>
+      <textarea id="ListLive" class="form-control" rows="5" readonly></textarea>
       <button class="btn btn-outline-success mt-2" onclick="copyToClipboard('ListLive')">📋 Copy</button>
     </div>
     <div class="box">
       <h5>❌ UID Die (<span id="countDead">0</span>)</h5>
-      <textarea id="ListDead" class="form-control" rows="3" readonly></textarea>
+      <textarea id="ListDead" class="form-control" rows="5" readonly></textarea>
       <button class="btn btn-outline-danger mt-2" onclick="copyToClipboard('ListDead')">📋 Copy</button>
     </div>
   </div>
@@ -76,6 +77,7 @@
       reader.onload = function(e) {
         document.getElementById('uidInput').value += '\n' + e.target.result;
         toggleClearButton();
+        checkUIDs();
       };
       reader.readAsText(file);
     });
@@ -106,11 +108,18 @@
       document.getElementById("loading").style.display = "block";
       for (let i = 0; i < total; i += batchSize) {
         let batch = uids.slice(i, i + batchSize);
-        await Promise.all(batch.map(async uid => {
+        await Promise.all(batch.map(async line => {
+          let uid = line.split('|')[0].trim();
           try {
             let res = await fetch(`https://graph.facebook.com/${uid}/picture?type=normal`);
-            (res.ok && !res.url.includes("/static")) ? live.push(uid) : dead.push(uid);
-          } catch (_) { dead.push(uid); }
+            if (res.ok && !res.url.includes("/static")) {
+              live.push(line);
+            } else {
+              dead.push(line);
+            }
+          } catch (_) {
+            dead.push(line);
+          }
         }));
         updateProgress((i + batch.length) / total * 100);
       }
