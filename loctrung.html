@@ -36,10 +36,9 @@
                         <button onclick="loadFile()" class="btn btn-primary">Chọn file</button>
                         <button onclick="clearData()" class="btn btn-danger">Xóa dữ liệu</button>
                         <br>
-                        <h2>Dữ Liệu Đã Lọc Trùng:</h2>
-                        <div id="uniqueData"></div>
-                        <h2>Dữ Liệu Trùng Lặp:</h2>
-                        <div id="duplicateData"></div>
+                        <textarea id="uniqueData" rows="3" class="form-control" placeholder="Dữ Liệu Đã Lọc Trùng..."></textarea>
+                        <br>
+                        <textarea id="duplicateData" rows="3" class="form-control" placeholder="Dữ Liệu Trùng Lặp..."></textarea>
                         <p id="totalData">Tổng dữ liệu: 0</p>
                         <progress id="progressBar" value="0" max="100" class="progress"></progress>
                     </div>
