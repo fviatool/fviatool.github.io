@@ -72,26 +72,48 @@
     return gb >= 1 ? `${mb.toFixed(2)} MB/s (${gb.toFixed(2)} GB/s)` : `${mb.toFixed(2)} MB/s`;
   }
 
-  async function fetchIP() {
-    const urls = [
-      'https://ipapi.co/json/',
-      'https://ipinfo.io/json?token=demo',
-      'https://ipwho.is/'
+  async function fetchIPInfo() {
+    const apis = [
+      {
+        url: "https://ipapi.co/json/",
+        parse: d => ({
+          ip: d.ip,
+          country: d.country_name,
+          city: d.city
+        })
+      },
+      {
+        url: "https://ipwho.is/",
+        parse: d => ({
+          ip: d.ip,
+          country: d.country,
+          city: d.city
+        })
+      },
+      {
+        url: "https://ipinfo.io/json?token=demo",
+        parse: d => {
+          const [lat, lon] = (d.loc || ",").split(',');
+          return {
+            ip: d.ip,
+            country: d.country,
+            city: d.city
+          };
+        }
+      }
     ];
-    for (let url of urls) {
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-        const ip = data.ip || 'Không rõ';
-        const city = data.city || data.region || '?';
-        const country = data.country || data.country_name || '?';
-        const version = ip.includes(":") ? 6 : 4;
-        return { ip, city, country, version };
-      } catch {}
-    }
-    return { ip: 'Không rõ', city: '?', country: '?', version: 4 };
-  }
 
+    for (const api of apis) {
+      try {
+        const res = await fetch(api.url);
+        const data = await res.json();
+        if (data && !data.error) return api.parse(data);
+      } catch (e) {
+        continue;
+      }
+    }
+    return { ip: "Không xác định", city: "?", country: "?" };
+  }
   async function measureSpeed(url) {
     const start = performance.now();
     try {
