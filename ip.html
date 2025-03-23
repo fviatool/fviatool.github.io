@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Thông tin IP</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f2f2f2;
+      padding: 30px;
+    }
+    .box {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 { color: #007bff; }
+    .result { margin-top: 20px; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>TRA CỨU IP</h2>
+    <div class="result" id="output">Đang lấy thông tin IP...</div>
+  </div>
+
+  <script>
+    async function getIP() {
+      try {
+        const res = await fetch("http://fviatool.github.ip.php");
+        const data = await res.json();
+        let html = "";
+        for (let key in data) {
+          html += `<b>${key}</b>: ${data[key]}<br>`;
+        }
+        document.getElementById("output").innerHTML = html;
+      } catch (e) {
+        document.getElementById("output").innerText = "Không thể lấy dữ liệu.";
+      }
+    }
+    getIP();
+  </script>
+</body>
+</html>
