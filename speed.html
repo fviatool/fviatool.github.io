@@ -59,7 +59,11 @@
     { name: "Netflix Hong Kong IPv6", url: "https://ipv6-c050-hkg001-ix.1.oca.nflxvideo.net/speedtest" },
     { name: "Netflix Japan IPv6", url: "https://ipv6-c132-tyo001-ix.1.oca.nflxvideo.net/speedtest" }
   ];
-
+  const customServers = [
+    { name: "Viettel", url: "://ipv4-c144-tyo001-ix.1.oca.nflxvideo.net/speedtest" },
+    { name: "VNPT", url: "https://ipv4-c144-tyo001-ix.1.oca.nflxvideo.net/speedtest" },
+    { name: "FPT", url: "https://ipv4-c144-tyo001-ix.1.oca.nflxvideo.net/speedtest" }
+  ];
   function formatSpeed(mbps) {
     const mb = parseFloat(mbps);
     if (isNaN(mb)) return "0 MB/s";
@@ -100,21 +104,39 @@
     return { ip: "Không xác định", city: "?", country: "?", version: 4 };
   }
 
-  async function measureSpeed(url) {
-    const start = performance.now();
-    try {
-      await fetch(url + '?r=' + Math.random(), {
-        method: 'GET',
-        mode: 'no-cors',
-        cache: 'no-store'
-      });
-      const end = performance.now();
-      const time = (end - start) / 1000;
-      const sizeMB = 5;
-      return (sizeMB / time).toFixed(2);
-    } catch {
-      return '0.00';
-    }
+  async function measureSpeedRealTime(url, type) {
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const progressEl = document.getElementById(type + "Progress");
+
+    return new Promise(async resolve => {
+      let loaded = 0;
+      const startTime = performance.now();
+      try {
+        const res = await fetch(url + '?r=' + Math.random(), { method: 'GET', cache: 'no-store', signal });
+        const reader = res.body.getReader();
+        const sizeMB = 500;
+        const interval = setInterval(() => {
+          const elapsed = (performance.now() - startTime) / 1000;
+          const speed = loaded / elapsed / 1024 / 1024;
+          progressEl.textContent = `Tốc độ thực: ${formatSpeed(speed)}`;
+        }, 500);
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          loaded += value.length;
+        }
+        clearInterval(interval);
+        progressEl.textContent = "";
+        const totalTime = (performance.now() - startTime) / 1000;
+        const finalSpeed = (loaded / 1024 / 1024) / totalTime;
+        resolve(finalSpeed.toFixed(2));
+      } catch (e) {
+        progressEl.textContent = "";
+        resolve("0.00");
+      }
+    });
   }
 
   async function startTest() {
