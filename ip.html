@@ -15,7 +15,7 @@
   </style>
 </head>
 <body>
-  <div class="box">
+  <div class="text-center">
     <h2>THÔNG TIN IP CỦA BẠN</h2>
     <div class="info" id="output">Đang lấy dữ liệu...</div>
   </div>
@@ -85,12 +85,8 @@
       }
 
       el.innerHTML = `
-        <b>IP:</b> ${info.ip}<br>
-        <b>Quốc gia:</b> ${info.country}<br>
-        <b>Tỉnh / Vùng:</b> ${info.region}<br>
-        <b>Thành phố:</b> ${info.city}<br>
-        <b>Nhà mạng:</b> ${info.org}<br>
-        <b>Toạ độ:</b> ${info.lat}, ${info.lon}
+        <b>IP:</b> ${info.ip}|<b>Quốc gia:</b> ${info.country}<br>
+    
       `;
     }
 
