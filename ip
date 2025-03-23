@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tra cứu IP & Quốc Gia</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f2f2f2;
+    }
+    .container {
+      max-width: 500px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #007bff;
+      margin-bottom: 25px;
+    }
+    .info {
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .info b {
+      color: #333;
+    }
+    @media (max-width: 600px) {
+      .container {
+        margin: 20px;
+        padding: 20px;
+      }
+      h2 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>THÔNG TIN IP CỦA BẠN</h2>
+    <div class="info" id="ipInfo">Đang lấy dữ liệu...</div>
+  </div>
+
+  <script>
+    async function fetchIPInfo() {
+      const apis = [
+        {
+          url: "https://ipapi.co/json/",
+          parse: d => ({
+            ip: d.ip,
+            country: d.country_name,
+            city: d.city,
+            region: d.region,
+            org: d.org,
+            lat: d.latitude,
+            lon: d.longitude
+          })
+        },
+        {
+          url: "https://ipwho.is/",
+          parse: d => ({
+            ip: d.ip,
+            country: d.country,
+            city: d.city,
+            region: d.region,
+            org: d.connection?.org || "Không rõ",
+            lat: d.latitude,
+            lon: d.longitude
+          })
+        },
+        {
+          url: "https://ipinfo.io/json?token=demo",
+          parse: d => {
+            const [lat, lon] = d.loc.split(',');
+            return {
+              ip: d.ip,
+              country: d.country,
+              city: d.city,
+              region: d.region,
+              org: d.org || "Không rõ",
+              lat: lat,
+              lon: lon
+            };
+          }
+        }
+      ];
+
+      for (const api of apis) {
+        try {
+          const res = await fetch(api.url);
+          const data = await res.json();
+          if (data && !data.error) return api.parse(data);
+        } catch (e) {
+          continue;
+        }
+      }
+      return null;
+    }
+
+    async function showIPInfo() {
+      const info = await fetchIPInfo();
+      const el = document.getElementById("ipInfo");
+      if (!info) {
+        el.innerText = "Không thể lấy thông tin IP.";
+        return;
+      }
+      el.innerHTML = `
+        <b>IP:</b> ${info.ip}<br>
+        <b>Quốc gia:</b> ${info.country}<br>
+        <b>Tỉnh / Vùng:</b> ${info.region}<br>
+        <b>Thành phố:</b> ${info.city}<br>
+        <b>Nhà mạng:</b> ${info.org}<br>
+        <b>Toạ độ:</b> ${info.lat}, ${info.lon}
+      `;
+    }
+
+    showIPInfo();
+  </script>
+</body>
+</html>
