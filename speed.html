@@ -1,55 +1,9 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-    <title>SpeedTest - Kiểm Tra Tốc Độ Mạng</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: #fff;
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 5px 25px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    h1 {
-      color: #007bff;
-    }
-    .info {
-      margin: 15px 0;
-      font-size: 18px;
-    }
-    .info span {
-      font-weight: bold;
-      color: #333;
-    }
-    button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 16px;
-      background: #28a745;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #218838;
-    }
-    .loader {
-      margin: 15px 0;
-      font-style: italic;
-      color: #666;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SpeedTest - Kiểm Tra Tốc Độ Mạng</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -66,19 +20,9 @@
       border-radius: 12px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-    h1 {
-      color: #007bff;
-      margin-bottom: 20px;
-    }
-    .result {
-      font-size: 20px;
-      margin: 10px 0;
-      color: #333;
-    }
-    .small {
-      font-size: 14px;
-      color: #777;
-    }
+    h1 { color: #007bff; margin-bottom: 20px; }
+    .result { font-size: 20px; margin: 10px 0; color: #333; }
+    .small { font-size: 14px; color: #777; }
     button {
       padding: 10px 25px;
       font-size: 16px;
@@ -86,54 +30,66 @@
       color: white;
       border: none;
       border-radius: 5px;
-      margin-top: 20px; 
+      margin-top: 20px;
       cursor: pointer;
     }
-    button:hover {
-      background: #218838;
-    }
+    button:hover { background: #218838; }
   </style>
 </head>
 <body>
 
-<div class="container">
+<div class="box">
   <h1>Kiểm Tra Tốc Độ Mạng</h1>
   <div class="result" id="ip">Đang xác định IP...</div>
   <div class="result" id="location">Vị trí: ...</div>
   <div class="result" id="download">Tải xuống: ...</div>
   <div class="result" id="upload">Tải lên: ...</div>
-  <div class="result" id="server">Máy chủ: ...</div>
+  <div class="result small" id="server">Máy chủ: ...</div>
   <button onclick="startTest()">Kiểm tra lại</button>
 </div>
 
 <script>
-  const serverList = [
-    {
-      name: "Viettel Network - Đồng Nai",
-      url: "http://speedtestkv3dp1.viettel.vn:8080/speedtest/upload.php"
-    },
-    {
-      name: "VNPT HCM",
-      url: "http://speedtest3.vtn.com.vn:8080/speedtest/upload.php"
-    },
-    {
-      name: "Viettel IDC - HCM",
-      url: "http://hht-speedtest.viettelidc.com.vn:8080/speedtest/upload.php"
-    }
+  const ipv4Servers = [
+    { name: "Netflix Singapore", url: "https://ipv4-c090-sin001-ix.1.oca.nflxvideo.net/speedtest" },
+    { name: "Netflix Hong Kong", url: "https://ipv4-c071-hkg001-ix.1.oca.nflxvideo.net/speedtest" },
+    { name: "Netflix Japan", url: "https://ipv4-c144-tyo001-ix.1.oca.nflxvideo.net/speedtest" }
+  ];
+  const ipv6Servers = [
+    { name: "Netflix Singapore IPv6", url: "https://ipv6-c074-sin001-ix.1.oca.nflxvideo.net/speedtest" },
+    { name: "Netflix Hong Kong IPv6", url: "https://ipv6-c050-hkg001-ix.1.oca.nflxvideo.net/speedtest" },
+    { name: "Netflix Japan IPv6", url: "https://ipv6-c132-tyo001-ix.1.oca.nflxvideo.net/speedtest" }
+  ];
+  const customServers = [
+    { name: "Viettel Network - Đồng Nai", url: "http://speedtestkv3dp1.viettel.vn:8080/speedtest/upload.php" },
+    { name: "VNPT HCM", url: "http://speedtest3.vtn.com.vn:8080/speedtest/upload.php" },
+    { name: "Viettel IDC - HCM", url: "http://hht-speedtest.viettelidc.com.vn:8080/speedtest/upload.php" }
   ];
 
   function formatSpeed(mbps) {
     const mb = parseFloat(mbps);
     if (isNaN(mb)) return "0 MB/s";
     const gb = mb / 1024;
-    return gb >= 1
-      ? `${mb.toFixed(2)} MB/s (${gb.toFixed(2)} GB/s)`
-      : `${mb.toFixed(2)} MB/s`;
+    return gb >= 1 ? `${mb.toFixed(2)} MB/s (${gb.toFixed(2)} GB/s)` : `${mb.toFixed(2)} MB/s`;
   }
 
-  async function getIPInfo() {
-    const res = await fetch("https://ipapi.co/json/");
-    return await res.json();
+  async function fetchIP() {
+    const urls = [
+      'https://ipapi.co/json/',
+      'https://ipinfo.io/json?token=demo',
+      'https://ipwho.is/'
+    ];
+    for (let url of urls) {
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const ip = data.ip || 'Không rõ';
+        const city = data.city || data.region || '?';
+        const country = data.country || data.country_name || '?';
+        const version = ip.includes(":") ? 6 : 4;
+        return { ip, city, country, version };
+      } catch {}
+    }
+    return { ip: 'Không rõ', city: '?', country: '?', version: 4 };
   }
 
   async function measureSpeed(url) {
@@ -145,10 +101,10 @@
         cache: 'no-store'
       });
       const end = performance.now();
-      const time = (end - start) / 5000;
+      const time = (end - start) / 1000;
       const sizeMB = 5;
       return (sizeMB / time).toFixed(2);
-    } catch (e) {
+    } catch {
       return '0.00';
     }
   }
@@ -160,12 +116,15 @@
     document.getElementById('upload').textContent = "Đang đo tốc độ tải lên...";
     document.getElementById('server').textContent = "Đang chọn máy chủ...";
 
-    const ipInfo = await getIPInfo();
-    document.getElementById('ip').textContent = `IP: ${ipInfo.ip}`;
-    document.getElementById('location').textContent = `Vị trí: ${ipInfo.city}, ${ipInfo.country_name}`;
+    const info = await fetchIP();
+    document.getElementById('ip').textContent = `IP: ${info.ip}`;
+    document.getElementById('location').textContent = `Vị trí: ${info.city}, ${info.country}`;
 
-    const server = serverList[Math.floor(Math.random() * serverList.length)];
-    document.getElementById('server').textContent = `Máy chủ: ${server.name}`;
+    // Gộp toàn bộ danh sách server
+    const allServers = [...customServers, ...(info.version === 6 ? ipv6Servers : ipv4Servers)];
+    const server = allServers[Math.floor(Math.random() * allServers.length)];
+
+    document.getElementById('server').textContent = `Máy chủ: ${server.name || 'Không rõ'}`;
 
     const download = await measureSpeed(server.url);
     document.getElementById('download').textContent = `Tải xuống: ${formatSpeed(download)}`;
@@ -174,8 +133,7 @@
     document.getElementById('upload').textContent = `Tải lên: ${formatSpeed(upload)}`;
   }
 
-  // Tự động chạy khi truy cập
-  startTest();
+  window.onload = startTest;
 </script>
 
 </body>
