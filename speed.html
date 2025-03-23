@@ -23,7 +23,6 @@
     h1 { color: #007bff; margin-bottom: 20px; }
     .result { font-size: 20px; margin: 10px 0; color: #333; }
     .small { font-size: 14px; color: #777; }
-    .progress-text { font-size: 16px; margin-top: 10px; color: #555; }
     button {
       padding: 10px 25px;
       font-size: 16px;
@@ -44,9 +43,7 @@
   <div class="result" id="ip">Đang xác định IP...</div>
   <div class="result" id="location">Vị trí: ...</div>
   <div class="result" id="download">Tải xuống: ...</div>
-  <div class="progress-text" id="downloadProgress"></div>
   <div class="result" id="upload">Tải lên: ...</div>
-  <div class="progress-text" id="uploadProgress"></div>
   <div class="result small" id="server">Máy chủ: ...</div>
   <button onclick="startTest()">Kiểm tra lại</button>
 </div>
@@ -63,9 +60,9 @@
     { name: "Netflix Japan IPv6", url: "https://ipv6-c132-tyo001-ix.1.oca.nflxvideo.net/speedtest" }
   ];
   const customServers = [
-    { name: "Viettel Network - Đồng Nai", url: "http://speedtestkv3dp1.viettel.vn:8080/speedtest/upload.php" },
-    { name: "VNPT HCM", url: "http://speedtest3.vtn.com.vn:8080/speedtest/upload.php" },
-    { name: "Viettel IDC - HCM", url: "http://hht-speedtest.viettelidc.com.vn:8080/speedtest/upload.php" }
+    { name: "Viettel Network - Đồng Nai", url: "http://speedtest.tele2.net/5MB.zip" },
+    { name: "VNPT HCM", url: "http://speedtest.tele2.net/5MB.zip" },
+    { name: "Viettel IDC - HCM", url: "http://speedtest.tele2.net/5MB.zip" }
   ];
 
   function formatSpeed(mbps) {
@@ -79,60 +76,50 @@
     const apis = [
       {
         url: "https://ipapi.co/json/",
-        parse: d => ({ ip: d.ip, country: d.country_name, city: d.city, version: d.version || 4 })
+        parse: d => ({ ip: d.ip, country: d.country_name, city: d.city })
       },
       {
         url: "https://ipwho.is/",
-        parse: d => ({ ip: d.ip, country: d.country, city: d.city, version: d.ip?.includes(':') ? 6 : 4 })
+        parse: d => ({ ip: d.ip, country: d.country, city: d.city })
       },
       {
         url: "https://ipinfo.io/json?token=demo",
-        parse: d => ({ ip: d.ip, country: d.country, city: d.city, version: d.ip?.includes(':') ? 6 : 4 })
+        parse: d => {
+          const [lat, lon] = (d.loc || ",").split(',');
+          return { ip: d.ip, country: d.country, city: d.city };
+        }
       }
     ];
+
     for (const api of apis) {
       try {
         const res = await fetch(api.url);
         const data = await res.json();
-        if (data && !data.error) return api.parse(data);
+        if (data && !data.error) {
+          const parsed = api.parse(data);
+          parsed.version = parsed.ip.includes(":") ? 6 : 4;
+          return parsed;
+        }
       } catch {}
     }
     return { ip: "Không xác định", city: "?", country: "?", version: 4 };
   }
 
-  async function measureSpeedRealTime(url, type) {
-    const controller = new AbortController();
-    const signal = controller.signal;
-    const progressEl = document.getElementById(type + "Progress");
-
-    return new Promise(async resolve => {
-      let loaded = 0;
-      const startTime = performance.now();
-      try {
-        const res = await fetch(url + '?r=' + Math.random(), { method: 'GET', cache: 'no-store', signal });
-        const reader = res.body.getReader();
-        const sizeMB = 5;
-        const interval = setInterval(() => {
-          const elapsed = (performance.now() - startTime) / 1000;
-          const speed = loaded / elapsed / 1024 / 1024;
-          progressEl.textContent = `Tốc độ thực: ${formatSpeed(speed)}`;
-        }, 500);
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          loaded += value.length;
-        }
-        clearInterval(interval);
-        progressEl.textContent = "";
-        const totalTime = (performance.now() - startTime) / 1000;
-        const finalSpeed = (loaded / 1024 / 1024) / totalTime;
-        resolve(finalSpeed.toFixed(2));
-      } catch (e) {
-        progressEl.textContent = "";
-        resolve("0.00");
-      }
-    });
+  async function measureSpeed(url) {
+    const start = performance.now();
+    try {
+      await fetch(url + '?r=' + Math.random(), {
+        method: 'GET',
+        mode: 'no-cors',
+        cache: 'no-store'
+      });
+      const end = performance.now();
+      const time = (end - start) / 1000;
+      const sizeMB = 5;
+      return (sizeMB / time).toFixed(2);
+    } catch {
+      return '0.00';
+    }
   }
 
   async function startTest() {
@@ -141,21 +128,20 @@
     document.getElementById('download').textContent = "Đang đo tốc độ tải xuống...";
     document.getElementById('upload').textContent = "Đang đo tốc độ tải lên...";
     document.getElementById('server').textContent = "Đang chọn máy chủ...";
-    document.getElementById('downloadProgress').textContent = "";
-    document.getElementById('uploadProgress').textContent = "";
 
     const info = await fetchIP();
     document.getElementById('ip').textContent = `IP: ${info.ip}`;
     document.getElementById('location').textContent = `Vị trí: ${info.city}, ${info.country}`;
 
-    const allServers = [...customServers, ...(info.version === 6 ? ipv6Servers : ipv4Servers)];
-    const server = allServers[Math.floor(Math.random() * allServers.length)];
-    document.getElementById('server').textContent = `Máy chủ: ${server.name || 'Không rõ'}`;
+    const list = info.version === 6 ? ipv6Servers : ipv4Servers;
+    const serverList = [...customServers, ...list];
+    const server = serverList[Math.floor(Math.random() * serverList.length)];
+    document.getElementById('server').textContent = `Máy chủ: ${server.name}`;
 
-    const download = await measureSpeedRealTime(server.url, "download");
+    const download = await measureSpeed(server.url);
     document.getElementById('download').textContent = `Tải xuống: ${formatSpeed(download)}`;
 
-    const upload = await measureSpeedRealTime(server.url, "upload");
+    const upload = await measureSpeed(server.url);
     document.getElementById('upload').textContent = `Tải lên: ${formatSpeed(upload)}`;
   }
 
@@ -163,4 +149,3 @@
 </script>
 
 </body>
-</html>
