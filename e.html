@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Thông tin IP & Quốc Gia</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f2f2f2;
+      padding: 30px;
+    }
+    .box {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #007bff;
+    }
+    .result {
+      margin-top: 20px;
+      line-height: 1.8;
+      font-size: 16px;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>THÔNG TIN IP CỦA BẠN</h2>
+    <div class="result" id="output">Đang lấy dữ liệu...</div>
+  </div>
+
+  <script>
+    async function getIPData() {
+      const apis = [
+        {
+          url: "https://ipapi.co/json/",
+          parse: d => ({
+            ip: d.ip,
+            country: d.country_name,
+            region: d.region,
+            city: d.city,
+            org: d.org,
+            lat: d.latitude,
+            lon: d.longitude
+          })
+        },
+        {
+          url: "https://ipwho.is/",
+          parse: d => ({
+            ip: d.ip,
+            country: d.country,
+            region: d.region,
+            city: d.city,
+            org: d.connection?.org || "Không rõ",
+            lat: d.latitude,
+            lon: d.longitude
+          })
+        },
+        {
+          url: "https://ipinfo.io/json?token=demo",
+          parse: d => {
+            const [lat, lon] = d.loc.split(',');
+            return {
+              ip: d.ip,
+              country: d.country,
+              region: d.region,
+              city: d.city,
+              org: d.org || "Không rõ",
+              lat: lat,
+              lon: lon
+            };
+          }
+        }
+      ];
+
+      for (const api of apis) {
+        try {
+          const res = await fetch(api.url);
+          const data = await res.json();
+          if (data && !data.error) return api.parse(data);
+        } catch (e) {
+          continue;
+        }
+      }
+      return null;
+    }
+
+    async function displayIP() {
+      const result = document.getElementById("output");
+      const data = await getIPData();
+      if (!data) {
+        result.innerHTML = "<span class='error'>Không thể lấy thông tin IP.</span>";
+        return;
+      }
+
+      result.innerHTML = `
+        <b>IP:</b> ${data.ip}|Quốc gia:</b> ${data.country}|Vùng:</b> ${data.region}|<b>Thành phố:</b> ${data.city}|<b>Nhà mạng:</b> ${data.org}|<b>Toạ độ:</b> ${data.lat}, ${data.lon}
+      `;
+    }
+
+    displayIP();
+    if (navigator.userAgent.toLowerCase().includes("curl")) {
+  fetch("https://ipapi.co/json/")
+    .then(res => res.json())
+    .then(data => {
+      document.body.innerHTML = "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+    });
+}
+  </script>
+</body>
+</html>
