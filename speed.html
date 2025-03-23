@@ -72,33 +72,21 @@
     return gb >= 1 ? `${mb.toFixed(2)} MB/s (${gb.toFixed(2)} GB/s)` : `${mb.toFixed(2)} MB/s`;
   }
 
-  async function fetchIPInfo() {
+  async function fetchIP() {
     const apis = [
       {
         url: "https://ipapi.co/json/",
-        parse: d => ({
-          ip: d.ip,
-          country: d.country_name,
-          city: d.city
-        })
+        parse: d => ({ ip: d.ip, country: d.country_name, city: d.city })
       },
       {
         url: "https://ipwho.is/",
-        parse: d => ({
-          ip: d.ip,
-          country: d.country,
-          city: d.city
-        })
+        parse: d => ({ ip: d.ip, country: d.country, city: d.city })
       },
       {
         url: "https://ipinfo.io/json?token=demo",
         parse: d => {
           const [lat, lon] = (d.loc || ",").split(',');
-          return {
-            ip: d.ip,
-            country: d.country,
-            city: d.city
-          };
+          return { ip: d.ip, country: d.country, city: d.city };
         }
       }
     ];
@@ -107,13 +95,16 @@
       try {
         const res = await fetch(api.url);
         const data = await res.json();
-        if (data && !data.error) return api.parse(data);
-      } catch (e) {
-        continue;
-      }
+        if (data && !data.error) {
+          const parsed = api.parse(data);
+          parsed.version = parsed.ip.includes(":") ? 6 : 4;
+          return parsed;
+        }
+      } catch {}
     }
-    return { ip: "Không xác định", city: "?", country: "?" };
+    return { ip: "Không xác định", city: "?", country: "?", version: 4 };
   }
+
   async function measureSpeed(url) {
     const start = performance.now();
     try {
@@ -142,11 +133,10 @@
     document.getElementById('ip').textContent = `IP: ${info.ip}`;
     document.getElementById('location').textContent = `Vị trí: ${info.city}, ${info.country}`;
 
-    // Gộp toàn bộ danh sách server
-    const allServers = [...customServers, ...(info.version === 6 ? ipv6Servers : ipv4Servers)];
-    const server = allServers[Math.floor(Math.random() * allServers.length)];
-
-    document.getElementById('server').textContent = `Máy chủ: ${server.name || 'Không rõ'}`;
+    const list = info.version === 6 ? ipv6Servers : ipv4Servers;
+    const serverList = [...customServers, ...list];
+    const server = serverList[Math.floor(Math.random() * serverList.length)];
+    document.getElementById('server').textContent = `Máy chủ: ${server.name}`;
 
     const download = await measureSpeed(server.url);
     document.getElementById('download').textContent = `Tải xuống: ${formatSpeed(download)}`;
