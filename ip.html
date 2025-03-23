@@ -1,47 +1,281 @@
 <!DOCTYPE html>
 <html lang="vi">
+ 
 <head>
-  <meta charset="UTF-8">
-  <title>Thông tin IP</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lọc UID Facebook</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background: #f0f2f5;
+        }
+ 
+        .container {
+            margin-top: 30px;
+            max-width: 800px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+ 
+        textarea {
+            resize: vertical;
+        }
+ 
+        .progress {
+            height: 20px;
+        }
+ 
+        .box {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+ 
+        #loading {
+            font-weight: bold;
+            color: #ff5722;
+            animation: pulse 1.2s infinite;
+            display: none;
+        }
+ 
+        #clearBtn {
+            display: none;
+        }
+ 
+        @keyframes pulse {
+            0% {
+                opacity: .4;
+            }
+ 
+            50% {
+                opacity: 1;
+            }
+ 
+            100% {
+                opacity: .4;
+            }
+        }
+    </style>
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f2f2f2;
-      padding: 30px;
+      font-family: system-ui, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f2f2f2;
     }
-    .box {
-      max-width: 600px;
-      margin: auto;
+    .container {
+      max-width: 500px;
+      margin: 40px auto;
       background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
-    h2 { color: #007bff; }
-    .result { margin-top: 20px; line-height: 1.8; }
+    h2 {
+      text-align: center;
+      color: #007bff;
+      margin-bottom: 25px;
+    }
+    .info {
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .info b {
+      color: #333;
+    }
+    @media (max-width: 600px) {
+      .container {
+        margin: 20px;
+        padding: 20px;
+      }
+      h2 {
+        font-size: 20px;
+      }
+    }
   </style>
+    <style>
+        /* Facebook Style */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        .container {
+            width: 80%;
+            max-width: 700px;
+            margin: 50px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1877f2;
+            font-size: 24px;
+        }
+        textarea, input, button {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            outline: none;
+        }
+        input[type="file"] {
+            border: none;
+        }
+        button {
+            background: #1877f2;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #0d6efd;
+        }
+        #results {
+            display: flex;
+            flex-direction: column;
+            margin-top: 20px;
+        }
+        .box {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: left;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+        .live { background-color: #d4edda; color: #155724; }
+        .dead { background-color: #f8d7da; color: #721c24; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        #copyButton { display: none; }
+        .loading { color: red; font-weight: bold; }
+    </style>
 </head>
 <body>
-  <div class="box">
-    <h2>TRA CỨU IP</h2>
-    <div class="result" id="output">Đang lấy thông tin IP...</div>
+    <div class="text-container">
+    <h2>IP</h2>
+    <div class="info" id="ipInfo">Đang lấy dữ liệu...</div>
   </div>
 
   <script>
-    async function getIP() {
-      try {
-        const res = await fetch("http://fviatool.github.ip.php");
-        const data = await res.json();
-        let html = "";
-        for (let key in data) {
-          html += `<b>${key}</b>: ${data[key]}<br>`;
+    async function fetchIPInfo() {
+      const apis = [
+        {
+          url: "https://ipapi.co/json/",
+          parse: d => ({
+            ip: d.ip,
+            country: d.country_name,
+            city: d.city,
+            region: d.region,
+            org: d.org,
+            lat: d.latitude,
+            lon: d.longitude
+          })
+        },
+        {
+          url: "https://ipwho.is/",
+          parse: d => ({
+            ip: d.ip,
+            country: d.country,
+            city: d.city,
+            region: d.region,
+            org: d.connection?.org || "Không rõ",
+            lat: d.latitude,
+            lon: d.longitude
+          })
+        },
+        {
+          url: "https://ipinfo.io/json?token=demo",
+          parse: d => {
+            const [lat, lon] = d.loc.split(',');
+            return {
+              ip: d.ip,
+              country: d.country,
+              city: d.city,
+              region: d.region,
+              org: d.org || "Không rõ",
+              lat: lat,
+              lon: lon
+            };
+          }
         }
-        document.getElementById("output").innerHTML = html;
-      } catch (e) {
-        document.getElementById("output").innerText = "Không thể lấy dữ liệu.";
+      ];
+
+      for (const api of apis) {
+        try {
+          const res = await fetch(api.url);
+          const data = await res.json();
+          if (data && !data.error) return api.parse(data);
+        } catch (e) {
+          continue;
+        }
       }
+      return null;
     }
-    getIP();
+
+    async function showIPInfo() {
+      const info = await fetchIPInfo();
+      const el = document.getElementById("ipInfo");
+      if (!info) {
+        el.innerText = "Không thể lấy thông tin IP.";
+        return;
+      }
+      el.innerHTML = `
+        <b>IP:</b> ${info.ip}|Quốc gia:</b> ${info.country}|<b>Tỉnh / Vùng:</b> ${info.region}|Thành phố:</b> ${info.city}|<b>Nhà mạng:</b> ${info.org}|<b>Toạ độ:</b> ${info.lat}, ${info.lon}
+      `;
+    }
+
+    showIPInfo();
+  
+function getClientIP() {
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) return $_SERVER['HTTP_CLIENT_IP'];
+    elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) return explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
+    else return $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
+}
+
+function getIPInfo($ip) {
+    $apis = [
+        "https://ipapi.co/$ip/json/",
+        "https://ipwho.is/$ip",
+        "https://ipinfo.io/$ip/json?token=demo"
+    ];
+    foreach ($apis as $url) {
+        $json = @file_get_contents($url);
+        if ($json) {
+            $data = json_decode($json, true);
+            if (!isset($data['error'])) return $data;
+        }
+    }
+    return ['ip' => $ip, 'error' => 'Không thể lấy dữ liệu'];
+}
+
+$ip = $_GET['ip'] ?? getClientIP();
+$info = getIPInfo($ip);
+
+// Tự động kiểm tra User-Agent là curl hoặc browser
+$userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+$isCurl = preg_match('/curl|httpie|wget/i', $userAgent);
+
+if ($isCurl) {
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($info, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    exit;
+}
   </script>
 </body>
 </html>
