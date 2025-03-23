@@ -62,7 +62,7 @@
   const customServers = [
     { name: "Viettel", url: "https://ipv4-c097-sin001-ix.1.oca.nflxvideo.net/speedtest?c=vn&amp;n=7552&amp;v=51&amp;e=1742763974&amp;t=8XWkfIjal-iKayYuIM1kXqP-VIu0D42KdWoKdA","url":"https://ipv4-c097-sin001-ix.1.oca.nflxvideo.net/speedtest?c=vn&amp;n=7552&amp;v=51&amp;e=1742763974&amp;t=8XWkfIjal-iKayYuIM1kXqP-VIu0D42KdWoKdA" },
     { name: "VNPT", url: "https://ipv4-c097-sin001-ix.1.oca.nflxvideo.net/speedtest?c=vn&amp;n=7552&amp;v=51&amp;e=1742763974&amp;t=8XWkfIjal-iKayYuIM1kXqP-VIu0D42KdWoKdA","url":"https://ipv4-c097-sin001-ix.1.oca.nflxvideo.net/speedtest?c=vn&amp;n=7552&amp;v=51&amp;e=1742763974&amp;t=8XWkfIjal-iKayYuIM1kXqP-VIu0D42KdWoKdA","url":"https://ipv4-c097-sin001-ix.1.oca.nflxvideo.net/speedtest?c=vn&amp;n=7552&amp;v=51&amp;e=1742763974&amp;t=8XWkfIjal-iKayYuIM1kXqP-VIu0D42KdWoKdA" },
-    { name: "FPT IDC", url: "http://speedtest.tele2.net/5MB.zip" }
+    { name: "FPT", url: "http://speedtest.tele2.net/5MB.zip" }
   ];
 
   function formatSpeed(mbps) {
@@ -114,8 +114,8 @@
         cache: 'no-store'
       });
       const end = performance.now();
-      const time = (end - start) / 1000;
-      const sizeMB = 500;
+      const time = (end - start) / 10000;
+      const sizeMB = 5;
       return (sizeMB / time).toFixed(2);
     } catch {
       return '0.00';
