@@ -1,0 +1,64 @@
+<?php
+function getClientIP() {
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) return $_SERVER['HTTP_CLIENT_IP'];
+    elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) return explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
+    else return $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
+}
+
+function getIPInfo($ip) {
+    $apis = [
+        "https://ipapi.co/$ip/json/",
+        "https://ipwho.is/$ip",
+        "https://ipinfo.io/$ip/json?token=demo"
+    ];
+    foreach ($apis as $url) {
+        $json = @file_get_contents($url);
+        if ($json) {
+            $data = json_decode($json, true);
+            if (!isset($data['error'])) return $data;
+        }
+    }
+    return ['ip' => $ip, 'error' => 'Không thể lấy dữ liệu'];
+}
+
+$ip = $_GET['ip'] ?? getClientIP();
+$info = getIPInfo($ip);
+
+// Tự động kiểm tra User-Agent là curl hoặc browser
+$userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+$isCurl = preg_match('/curl|httpie|wget/i', $userAgent);
+
+if ($isCurl) {
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($info, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+?>
+
+<!-- HTML hiển thị nếu không phải curl -->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Thông tin IP</title>
+  <style>
+    body { font-family: sans-serif; background: #f8f8f8; padding: 40px; }
+    .box { background: #fff; padding: 20px; border-radius: 10px; max-width: 500px; margin: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h2 { color: #007bff; }
+    .info { line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>THÔNG TIN IP</h2>
+    <div class="info">
+      <b>IP:</b> <?= htmlspecialchars($info['ip']) ?><br>
+      <b>Quốc gia:</b> <?= $info['country_name'] ?? $info['country'] ?? 'Không rõ' ?><br>
+      <b>Thành phố:</b> <?= $info['city'] ?? 'Không rõ' ?><br>
+      <b>Vùng:</b> <?= $info['region'] ?? 'Không rõ' ?><br>
+      <b>Tọa độ:</b> <?= ($info['latitude'] ?? $info['lat'] ?? '?') . ', ' . ($info['longitude'] ?? $info['lon'] ?? '?') ?><br>
+      <b>Nhà mạng:</b> <?= $info['org'] ?? ($info['connection']['org'] ?? 'Không rõ') ?>
+    </div>
+  </div>
+</body>
+</html>
