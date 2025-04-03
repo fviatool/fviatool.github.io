@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>SQLite Extractor & UID Checker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/sql-wasm.js"></script>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body { background: #f9f9f9; padding: 30px; font-family: Arial, sans-serif; }
+    .container { max-width: 960px; margin: auto; }
+    .box { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }
+    textarea { font-size: 14px; resize: vertical; min-height: 150px; }
+    .loading, .progress { margin-top: 10px; }
+    .counts { font-weight: bold; margin-top: 10px; }
+  </style>
+</head>
+<body>
+<div class="box-center">
+    <h5>1. Trích xuất từ file SQLite</h5>
+    <input type="file" id="fileInput" multiple accept=".sqlite,.db" class="form-control mb-3">
+    <div class="progress" id="progressBarContainer" style="display: none;">
+      <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%">0%</div>
+    </div>
+    <textarea id="dataOutput" class="form-control mb-2" placeholder="Dữ liệu trích xuất..."></textarea>
+    <button class="btn btn-warning mb-3" onclick="copyText('dataOutput')">Sao chép dữ liệu</button>
+  </div>
+
+  <div class="box" id="uidBox" style="display: none;">
+    <div class="loading" id="loading">Đang kiểm tra UID...</div>
+    <div class="counts">
+      Live: <span id="liveCount">0</span> | Dead: <span id="deadCount">0</span>
+    </div>
+    <textarea id="liveList" class="form-control mb-2" placeholder="Live UID..."></textarea>
+    <button class="btn btn-success mb-3" onclick="copyText('liveList')">Copy Live UID</button>
+    <textarea id="deadList" class="form-control" placeholder="Dead UID..."></textarea>
+  </div>
+</div>
+
+<script>
+  let seen = new Set();
+
+  async function loadSQL() {
+    return await initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}` });
+  }
+
+  document.getElementById('fileInput').addEventListener('change', async function () {
+    const SQL = await loadSQL();
+    const files = this.files;
+    const output = [];
+    const total = files.length;
+    let completed = 0;
+
+    document.getElementById("progressBarContainer").style.display = "block";
+
+    for (const file of files) {
+      await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            await new Promise(r => setTimeout(r, 0)); // giải phóng event loop
+            const db = new SQL.Database(new Uint8Array(e.target.result));
+            const result = db.exec("SELECT uid, pass, fa2, cookie, email, passmail, mailrecovery, birthday, name FROM accounts");
+            if (result.length > 0) {
+              for (const row of result[0].values) {
+                const line = row.join("|");
+                if (!seen.has(line)) {
+                  seen.add(line);
+                  output.push(line);
+                }
+              }
+            }
+          } catch (err) {
+            alert(`Lỗi xử lý file: ${file.name}`);
+          } finally {
+            completed++;
+            const percent = Math.floor((completed / total) * 100);
+            const bar = document.getElementById("progressBar");
+            bar.style.width = percent + "%";
+            bar.textContent = percent + "%";
+            if (completed === total) {
+              document.getElementById("dataOutput").value = Array.from(seen).join("\n");
+              document.getElementById("progressBarContainer").style.display = "none";
+              document.getElementById("uidBox").style.display = "block";
+              checkUIDs(); // Auto check UID sau khi trích xuất
+            }
+            resolve();
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+  });
+
+  async function checkUIDs() {
+    const inputData = document.getElementById('dataOutput').value.trim();
+    if (!inputData) return alert("Chưa có dữ liệu để kiểm tra.");
+
+    const lines = inputData.split("\n").filter(Boolean);
+    const batchSize = 50;
+    let live = [], dead = [];
+
+    document.getElementById('loading').style.display = 'block';
+
+    for (let i = 0; i < lines.length; i += batchSize) {
+      const batch = lines.slice(i, i + batchSize);
+      await Promise.all(batch.map(async line => {
+        const uid = line.split("|")[0];
+        try {
+          const res = await fetch(`https://graph.facebook.com/${uid}/picture?type=normal`);
+          if (res.ok && !res.url.includes("static")) {
+            live.push(line);
+          } else {
+            dead.push(line);
+          }
+        } catch {
+          dead.push(line + " (error)");
+        }
+      }));
+      await new Promise(r => setTimeout(r, 50)); // nghỉ giữa batch
+    }
+
+    document.getElementById('liveList').value = live.join("\n");
+    document.getElementById('deadList').value = dead.join("\n");
+    document.getElementById('liveCount').textContent = live.length;
+    document.getElementById('deadCount').textContent = dead.length;
+    document.getElementById('loading').style.display = 'none';
+    alert("✅ Kiểm tra UID hoàn tất.");
+  }
+
+  function copyText(id) {
+    const text = document.getElementById(id).value.trim();
+    if (!text) return alert("Không có nội dung để sao chép.");
+    navigator.clipboard.writeText(text).then(() => alert("Đã sao chép!"));
+  }
+</script>
+</body>
+</html>
