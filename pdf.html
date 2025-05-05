@@ -89,94 +89,113 @@
             background-color: yellow;
         }
     </style>
-</head>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Canvas + Chỉnh sửa HTML</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    canvas {
+      border: 1px solid #000;
+      margin-top: 10px;
+      max-width: 100%;
+    }
+    textarea {
+      width: 100%;
+      height: 300px;
+      margin-top: 20px;
+      display: none;
+    }
+    .btn {
+      margin: 5px 0;
+    }
+  </style>
 </head>
 <body>
-     <div class="text-center">   
-    <h2>Chỉnh sửa và Xóa thông tin trên Canvas</h2>
 
-    <!-- Chọn ảnh PNG và vẽ lên Canvas -->
-    <h3>Chọn ảnh PNG và vẽ chữ</h3>
-    <input type="file" id="file-input" accept="image/png">
-    <button onclick="convertToCanvas()">Chuyển đổi ảnh</button>
-    <input type="text" id="text-input" placeholder="Nhập chữ để vẽ">
-    <button onclick="drawText()">Vẽ chữ</button>
+  <h2>Chỉnh sửa ảnh & HTML</h2>
 
-    <br><br>
+  <!-- Vẽ ảnh & chữ -->
+  <input type="file" id="file-input" accept="image/png">
+  <input type="text" id="text-input" placeholder="Nhập chữ để vẽ">
+  <button onclick="convertToCanvas()" class="btn">Chuyển ảnh lên canvas</button>
+  <button onclick="drawText()" class="btn">Vẽ chữ lên ảnh</button>
 
-    <!-- Button Copy HTML -->
-    <button onclick="copyHTML()">Copy HTML Code</button>
+  <br><br>
+  <canvas id="canvas" width="800" height="600"></canvas>
 
-    <br><br>
+  <!-- Chỉnh sửa HTML -->
+  <br><br>
+  <button onclick="enableEdit()" class="btn">Chỉnh sửa HTML trang</button>
+  <button onclick="applyHTML()" class="btn">Áp dụng HTML đã chỉnh</button>
+  <textarea id="html-editor"></textarea>
 
-    <canvas id="canvas" width="2480" height="3429"></canvas>
+  <!-- Copy HTML -->
+  <br>
+  <button onclick="copyHTML()" class="btn">Copy toàn bộ HTML</button>
 
-    <script>
-        let canvas = document.getElementById('canvas');
-        let context = canvas.getContext('2d');
-        let img = new Image();
-        let text = ''; 
+  <script>
+    let canvas = document.getElementById('canvas');
+    let context = canvas.getContext('2d');
+    let img = new Image();
 
-        // Chuyển đổi file PNG lên Canvas
-        function convertToCanvas() {
-            const fileInput = document.getElementById('file-input');
-            const file = fileInput.files[0];
+    function convertToCanvas() {
+      const fileInput = document.getElementById('file-input');
+      const file = fileInput.files[0];
 
-            if (file && file.type === 'image/png') {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    img.src = event.target.result;
-                };
+      if (file && file.type === 'image/png') {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
 
-                reader.readAsDataURL(file);
+        img.onload = function() {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          context.drawImage(img, 0, 0);
+        };
+      } else {
+        alert('Vui lòng chọn file PNG');
+      }
+    }
 
-                img.onload = function() {
-                    // Đặt kích thước canvas bằng kích thước ảnh
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    context.drawImage(img, 0, 0);
-                    drawText(); // Vẽ chữ nếu có
-                };
-            } else {
-                alert('Vui lòng chọn file PNG');
-            }
-        }
+    function drawText() {
+      const text = document.getElementById('text-input').value;
+      context.drawImage(img, 0, 0);
+      context.font = '24px Arial';
+      context.fillStyle = 'black';
+      context.fillText(text, 50, 50);
+    }
 
-        // Vẽ thông tin lên Canvas
-        function drawText() {
-            text = document.getElementById('text-input').value;
+    function enableEdit() {
+      const html = document.documentElement.outerHTML;
+      document.getElementById('html-editor').value = html;
+      document.getElementById('html-editor').style.display = 'block';
+    }
 
-            // Cập nhật kích thước canvas nếu chưa có ảnh
-            if (!img.src) {
-                canvas.width = 600;
-                canvas.height = 400;
-            }
+    function applyHTML() {
+      const html = document.getElementById('html-editor').value;
+      document.open();
+      document.write(html);
+      document.close();
+    }
 
-            context.clearRect(0, 0, canvas.width, canvas.height); // Xóa canvas cũ
+    function copyHTML() {
+      const htmlContent = document.documentElement.outerHTML;
+      const textArea = document.createElement('textarea');
+      textArea.value = htmlContent;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('HTML đã được sao chép vào clipboard');
+    }
+  </script>
 
-            // Vẽ ảnh nếu có
-            if (img.src) {
-                context.drawImage(img, 0, 0);
-            }
-
-            // Vẽ chữ lên canvas
-            context.font = '20px Arial';
-            context.fillStyle = 'black';
-            context.fillText(text, 50, 50);
-        }
-
-        // Copy toàn bộ HTML vào clipboard
-        function copyHTML() {
-            const htmlContent = document.documentElement.outerHTML;
-            const textArea = document.createElement('textarea');
-            textArea.value = htmlContent;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-            alert('HTML code đã được sao chép vào clipboard');
-        }
-    </script>
-
-
-</body></html>
+</body>
+</html>
