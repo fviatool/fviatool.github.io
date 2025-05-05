@@ -1,0 +1,106 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chỉnh sửa và Xóa thông tin trên Canvas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #canvas {
+            border: 1px solid #000;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .controls {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Chỉnh sửa và Xóa thông tin trên Canvas</h2>
+
+    <!-- Chọn ảnh PNG và vẽ lên Canvas -->
+    <h3>Chọn ảnh PNG và vẽ chữ</h3>
+    <input type="file" id="file-input" accept="image/png">
+    <button onclick="convertToCanvas()">Chuyển đổi ảnh</button>
+    <input type="text" id="text-input" placeholder="Nhập chữ để vẽ">
+    <button onclick="drawText()">Vẽ chữ</button>
+
+    <br><br>
+
+    <!-- Button Copy HTML -->
+    <button onclick="copyHTML()">Copy HTML Code</button>
+
+    <br><br>
+
+    <canvas id="canvas" width="2480" height="3429"></canvas>
+
+    <script>
+        let canvas = document.getElementById('canvas');
+        let context = canvas.getContext('2d');
+        let img = new Image();
+        let text = ''; 
+
+        // Chuyển đổi file PNG lên Canvas
+        function convertToCanvas() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+
+            if (file && file.type === 'image/png') {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    img.src = event.target.result;
+                };
+
+                reader.readAsDataURL(file);
+
+                img.onload = function() {
+                    // Đặt kích thước canvas bằng kích thước ảnh
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    context.drawImage(img, 0, 0);
+                    drawText(); // Vẽ chữ nếu có
+                };
+            } else {
+                alert('Vui lòng chọn file PNG');
+            }
+        }
+
+        // Vẽ thông tin lên Canvas
+        function drawText() {
+            text = document.getElementById('text-input').value;
+
+            // Cập nhật kích thước canvas nếu chưa có ảnh
+            if (!img.src) {
+                canvas.width = 600;
+                canvas.height = 400;
+            }
+
+            context.clearRect(0, 0, canvas.width, canvas.height); // Xóa canvas cũ
+
+            // Vẽ ảnh nếu có
+            if (img.src) {
+                context.drawImage(img, 0, 0);
+            }
+
+            // Vẽ chữ lên canvas
+            context.font = '20px Arial';
+            context.fillStyle = 'black';
+            context.fillText(text, 50, 50);
+        }
+
+        // Copy toàn bộ HTML vào clipboard
+        function copyHTML() {
+            const htmlContent = document.documentElement.outerHTML;
+            const textArea = document.createElement('textarea');
+            textArea.value = htmlContent;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            alert('HTML code đã được sao chép vào clipboard');
+        }
+    </script>
+
+
+</body></html>
