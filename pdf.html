@@ -1,5 +1,12 @@
-<html lang="en"><head>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chỉnh sửa và Xóa thông tin trên Canvas</title>
     <style>
@@ -15,8 +22,77 @@
             margin-top: 10px;
         }
     </style>
+    
+    <style>
+        body {
+            padding-top: 50px;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .panel-heading {
+            background-color: #5cb85c;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 15px;
+            text-align: center;
+        }
+
+        #uidInput {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background-color: #5cb85c;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        #result {
+            margin-top: 20px;
+        }
+
+        p#loadingMessage {
+            display: none;
+            font-size: 16px;
+            color: #5bc0de;
+            margin-top: 10px;
+        }
+
+        #totalUID {
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .green-text {
+            color: green;
+            font-weight: bold;
+        }
+
+        .red-text {
+            color: red;
+            font-style: italic;
+        }
+
+        .highlight-text {
+            background-color: yellow;
+        }
+    </style>
+</head>
 </head>
 <body>
+     <div class="text-center">   
     <h2>Chỉnh sửa và Xóa thông tin trên Canvas</h2>
 
     <!-- Chọn ảnh PNG và vẽ lên Canvas -->
