@@ -141,7 +141,7 @@
     function checkUIDs() {
       const raw = document.getElementById("uidInput").value.split("\n").map(e => e.trim()).filter(Boolean);
       const lines = [...new Set(raw)];
-      const batchSize = parseInt(document.getElementById("batchSize").value);
+      const batchSize = 5;  // Chia nhỏ danh sách kiểm tra theo từng batch
       const live = [], dead = [];
       let liveCount = 0, deadCount = 0;
       document.getElementById("loading").style.display = "block";
@@ -219,7 +219,9 @@
       filterBM(); // gọi lọc luôn sau khi tích
     }
 
-    window.onload = autoCheckBM; // tự động gọi khi tải trang
+    window.onload = function() {
+      autoCheckBM();
+    };
   </script>
 </body>
 </html>
