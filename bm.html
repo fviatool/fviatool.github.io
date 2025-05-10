@@ -1,114 +1,82 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lọc UID Facebook</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lọc UID Facebook - BM Tool</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"/>
   <style>
     body {
       background: #f0f2f5;
     }
     .container {
       margin-top: 30px;
-      max-width: 800px;
+      max-width: 900px;
       background: #fff;
-      padding: 20px;
+      padding: 25px;
       border-radius: 10px;
       box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
     }
     textarea {
       resize: vertical;
     }
-    .progress {
-      height: 20px;
-    }
-    .box {
-      background: #e9ecef;
+    .section {
+      background: #f8f9fa;
       padding: 15px;
       border-radius: 8px;
-      margin-top: 15px;
+      margin-top: 20px;
     }
-    #loading {
+    .section textarea {
+      height: 120px;
+    }
+    .label {
       font-weight: bold;
-      color: #ff5722;
-      animation: pulse 1.2s infinite;
-      display: none;
-    }
-    #clearBtn {
-      display: none;
-    }
-    @keyframes pulse {
-      0% { opacity: .4; }
-      50% { opacity: 1; }
-      100% { opacity: .4; }
+      color: #007bff;
     }
   </style>
 </head>
 <body>
   <div class="text-container">
-    <h2 class="text-center text-primary">LỌC UID FACEBOOK</h2>
+    <h3 class="text-center text-primary">LỌC UID FACEBOOK THEO BM</h3>
 
-    <textarea id="uidInput" rows="5" class="form-control" placeholder="Nhập danh sách UID..." oninput="toggleClearButton(); checkUIDs();"></textarea>
-    <br>
+    <textarea id="uidInput" rows="5" class="form-control mt-3" placeholder="Nhập danh sách UID..." oninput="autoFilterBM(); toggleClearButton();"></textarea>
 
-    <div class="d-flex justify-content-between">
-      <div class="form-group mb-0">
-        <input type="file" id="fileInput" accept=".txt" hidden>
+    <div class="d-flex justify-content-between mt-3">
+      <div>
+        <input type="file" id="fileInput" accept=".txt" hidden />
         <button class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">📂 Chọn file</button>
       </div>
       <div>
-      </div>
-      <div>
-        <button class="btn btn-success" onclick="checkUIDs()">✅ Check UID</button>
-        <br>
-        <button class="btn btn-danger" id="clearBtn" onclick="clearAll()">🗑 Xoá All</button>
-      </div>
-    </div>
-        <br>
-            <div class="form-group">
-        <label><input type="checkbox" id="filterBM5"> BM5</label>
-        <label><input type="checkbox" id="filterBM10"> BM10</label>
-        <label><input type="checkbox" id="filterBM3"> BM3</label>
-      </div>
-  <div class="result mt-2" style="display: flex; justify-content: space-between;">
-      
-  <p>Số lượng BM5: <span id="countBM5">0</span></p>
-  <p>Số lượng BM10: <span id="countBM10">0</span></p>
-  <p>Số lượng BM3: <span id="countBM3">0</span></p>
-</div>
-      <textarea id="bmOutput" class="form-control mt-2" rows="5" placeholder="Kết quả lọc BM..." readonly></textarea>
-      <button class="btn btn-outline-secondary mt-2" onclick="copyToClipboard('bmOutput')">📋 Copy BM</button>
-</div>
-    <div class="form-group">
-      <textarea id="map_have_text" class="form-control" rows="3" placeholder="Nhập từ cần chứa..."></textarea>
-    </div>
-    <div class="form-group">
-      <textarea id="map_havenot_text" class="form-control" rows="3" placeholder="Nhập từ cần loại..."></textarea>
-    </div>
-    <div class="form-group">
-      <button class="btn btn-warning" onclick="mapText()">🔎 Lọc</button>
+        <button class="btn btn-danger" id="clearBtn" onclick="clearAll()" style="display:none;">🗑 Xoá All</button>
+   <br>
+   <br>
+   </div>
+   </div>  
+    <div class="text-center">
+      <label><input type="checkbox" id="filterBM10" checked> BM10</label>
+      <label class="ml-3"><input type="checkbox" id="filterBM5" checked> BM5</label>
+      <label class="ml-3"><input type="checkbox" id="filterBM3" checked> BM3</label>
+
+    <div class="mt-2">
+      <p>BM10: <span id="count10">0</span> | BM5: <span id="count5">0</span> | BM3: <span id="count3">0</span></p>
     </div>
 
-    <div class="form-group">
-      <textarea id="filteredOutput" class="form-control" rows="3" placeholder="Kết quả sau khi lọc..."></textarea>
-      <button class="btn btn-outline-secondary mt-2" onclick="copyToClipboard('filteredOutput')">📋 Copy kết quả lọc</button>
+    <div class="text-center">
+      <div class="label">Kết quả BM10:</div>
+      <textarea id="bm10" rows="5" readonly class="form-control mb-2"></textarea>
+      <button class="btn btn-outline-secondary" onclick="copyToClipboard('bm10')">📋 Copy BM10</button>
     </div>
 
-    <p id="loading">⏳ Đang xử lý...</p>
-    <div class="progress mb-3">
-      <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
+    <div class="text-center">
+      <div class="label">Kết quả BM5:</div>
+      <textarea id="bm5" rows="5" readonly class="form-control mb-2"></textarea>
+      <button class="btn btn-outline-secondary" onclick="copyToClipboard('bm5')">📋 Copy BM5</button>
     </div>
 
-        <div class="form-group">
-      <h5>✅ UID Sống (<span id="countLive">0</span>)</h5>
-      <textarea id="ListLive" class="form-control" rows="5" readonly></textarea>
-      <button class="btn btn-outline-success mt-2" onclick="copyToClipboard('ListLive')">📋 Copy</button>
-    </div>
-        <div class="form-group">
-      <h5>❌ UID Die (<span id="countDead">0</span>)</h5>
-      <textarea id="ListDead" class="form-control" rows="5" readonly></textarea>
-      <button class="btn btn-outline-danger mt-2" onclick="copyToClipboard('ListDead')">📋 Copy</button>
+    <div class="text-center">
+      <div class="label">Kết quả BM3:</div>
+      <textarea id="bm3" rows="5" readonly class="form-control mb-2"></textarea>
+      <button class="btn btn-outline-secondary" onclick="copyToClipboard('bm3')">📋 Copy BM3</button>
     </div>
   </div>
 
@@ -120,15 +88,8 @@
 
     function clearAll() {
       document.getElementById("uidInput").value = "";
-      document.getElementById("ListLive").value = "";
-      document.getElementById("ListDead").value = "";
-      document.getElementById("filteredOutput").value = "";
-      document.getElementById("bmOutput").value = "";
-      document.getElementById("countLive").textContent = "0";
-      document.getElementById("countDead").textContent = "0";
-      document.getElementById("countBM5").textContent = "0";
-      document.getElementById("countBM10").textContent = "0";
-      document.getElementById("countBM3").textContent = "0";
+      ['bm10', 'bm5', 'bm3'].forEach(id => document.getElementById(id).value = "");
+      ['count10', 'count5', 'count3'].forEach(id => document.getElementById(id).textContent = "0");
       toggleClearButton();
     }
 
@@ -138,89 +99,33 @@
       document.execCommand("copy");
     }
 
-    function checkUIDs() {
-      const raw = document.getElementById("uidInput").value.split("\n").map(e => e.trim()).filter(Boolean);
-      const lines = [...new Set(raw)];
-      const batchSize = 5;  // Chia nhỏ danh sách kiểm tra theo từng batch
-      const live = [], dead = [];
-      let liveCount = 0, deadCount = 0;
-      document.getElementById("loading").style.display = "block";
+    function autoFilterBM() {
+      const lines = document.getElementById("uidInput").value.split('\n').map(e => e.trim()).filter(Boolean);
+      const uniqueLines = [...new Set(lines)];
 
-      let progress = 0;
-      const total = lines.length;
-
-      (async () => {
-        for (let i = 0; i < total; i += batchSize) {
-          const batch = lines.slice(i, i + batchSize);
-          await Promise.all(batch.map(async (line) => {
-            const uid = line.split('|')[0];
-            try {
-              const res = await fetch(`https://graph.facebook.com/${uid}/picture?type=normal`);
-              if (res.ok && !res.url.includes("/static")) {
-                document.getElementById("ListLive").value += line + "\n";
-                document.getElementById("countLive").textContent = ++liveCount;
-              } else {
-                document.getElementById("ListDead").value += line + "\n";
-                document.getElementById("countDead").textContent = ++deadCount;
-              }
-            } catch {
-              document.getElementById("ListDead").value += line + " (Lỗi kết nối)\n";
-              document.getElementById("countDead").textContent = ++deadCount;
-            }
-            progress++;
-            const percent = Math.round((progress / total) * 100);
-            document.getElementById("progressBar").style.width = percent + "%";
-            document.getElementById("progressBar").textContent = percent + "%";
-          }));
-        }
-        document.getElementById("loading").style.display = "none";
-      })();
-    }
-
-    function mapText() {
-      const input = document.getElementById("uidInput").value.split("\n").map(e => e.trim()).filter(Boolean);
-      const includeWords = document.getElementById("map_have_text").value.toLowerCase().split("\n").map(e => e.trim()).filter(Boolean);
-      const excludeWords = document.getElementById("map_havenot_text").value.toLowerCase().split("\n").map(e => e.trim()).filter(Boolean);
-
-      const filtered = input.filter(line => {
-        const lower = line.toLowerCase();
-        const hasInclude = includeWords.length === 0 || includeWords.some(word => lower.includes(word));
-        const hasExclude = excludeWords.length === 0 || excludeWords.every(word => !lower.includes(word));
-        return hasInclude && hasExclude;
-      });
-
-      document.getElementById("filteredOutput").value = filtered.join("\n");
-    }
-
-    function filterBM() {
-      const input = document.getElementById("uidInput").value.split("\n").map(e => e.trim()).filter(Boolean);
-      const bm5Checked = document.getElementById("filterBM5").checked;
       const bm10Checked = document.getElementById("filterBM10").checked;
+      const bm5Checked = document.getElementById("filterBM5").checked;
       const bm3Checked = document.getElementById("filterBM3").checked;
 
-      const bm5List = [], bm10List = [], bm3List = [];
+      const bm10 = [], bm5 = [], bm3 = [];
 
-      input.forEach(line => {
-        if (bm5Checked && line.includes("BM5")) bm5List.push(line);
-        if (bm10Checked && line.includes("BM10")) bm10List.push(line);
-        if (bm3Checked && line.includes("BM3")) bm3List.push(line);
+      uniqueLines.forEach(line => {
+        if (line.includes("BM10") && bm10Checked) bm10.push(line);
+        else if (line.includes("BM5") && bm5Checked) bm5.push(line);
+        else if (line.includes("BM3") && bm3Checked) bm3.push(line);
       });
 
-      document.getElementById("bmOutput").value = [...bm5List, ...bm10List, ...bm3List].join("\n");
-      document.getElementById("countBM5").textContent = bm5List.length;
-      document.getElementById("countBM10").textContent = bm10List.length;
-      document.getElementById("countBM3").textContent = bm3List.length;
+      document.getElementById("bm10").value = bm10.join("\n");
+      document.getElementById("bm5").value = bm5.join("\n");
+      document.getElementById("bm3").value = bm3.join("\n");
+
+      document.getElementById("count10").textContent = bm10.length;
+      document.getElementById("count5").textContent = bm5.length;
+      document.getElementById("count3").textContent = bm3.length;
     }
 
-    function autoCheckBM() {
-      document.getElementById("filterBM5").checked = true;
-      document.getElementById("filterBM10").checked = true;
-      document.getElementById("filterBM3").checked = true;
-      filterBM(); // gọi lọc luôn sau khi tích
-    }
-
-    window.onload = function() {
-      autoCheckBM();
+    window.onload = function () {
+      autoFilterBM();
     };
   </script>
 </body>
