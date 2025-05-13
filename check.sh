@@ -1,12 +1,87 @@
 #!/bin/bash
 
-# Cập nhật & cài đặt các công cụ cần thiết
-echo "[*] Installing required tools: net-tools, jq, lsof, curl..."
-sudo apt update -y >/dev/null
-sudo apt install -y net-tools jq lsof curl >/dev/null || {
-  echo "[!] Failed to install dependencies."
-  exit 1
+log() {
+    echo "[*] $1"
 }
+
+detect_os() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        DISTRO_ID="${ID,,}" # chuyển thành chữ thường
+        case "$DISTRO_ID" in
+            ubuntu|debian|kali)
+                OS="debian"
+                PKG_MGR="apt"
+                FIREWALL="ufw"
+                ;;
+            almalinux|rocky|centos|rhel|cloudlinux|fedora)
+                OS="rhel"
+                PKG_MGR=$(command -v dnf >/dev/null 2>&1 && echo "dnf" || echo "yum")
+                FIREWALL="firewalld"
+                ;;
+            opensuse*|suse)
+                OS="suse"
+                PKG_MGR="zypper"
+                FIREWALL="firewalld"
+                ;;
+            alpine)
+                OS="alpine"
+                PKG_MGR="apk"
+                FIREWALL="none"
+                ;;
+            arch)
+                OS="arch"
+                PKG_MGR="pacman"
+                FIREWALL="none"
+                ;;
+            *)
+                echo "[!] Unsupported OS: $DISTRO_ID"
+                exit 1
+                ;;
+        esac
+    else
+        echo "[!] Cannot detect OS."
+        exit 1
+    fi
+}
+
+install_dependencies() {
+    log "Detected OS: $DISTRO_ID ($OS)"
+    log "Installing: net-tools, jq, lsof, curl"
+
+    case "$PKG_MGR" in
+        apt)
+            sudo apt update -y && sudo apt install -y net-tools jq lsof curl >/dev/null
+            ;;
+        dnf|yum)
+            sudo $PKG_MGR install -y epel-release >/dev/null 2>&1
+            sudo $PKG_MGR install -y net-tools jq lsof curl >/dev/null
+            ;;
+        apk)
+            sudo apk update && sudo apk add net-tools jq lsof curl >/dev/null
+            ;;
+        pacman)
+            sudo pacman -Sy --noconfirm net-tools jq lsof curl >/dev/null
+            ;;
+        zypper)
+            sudo zypper refresh && sudo zypper install -y net-tools jq lsof curl >/dev/null
+            ;;
+        *)
+            echo "[!] Unsupported package manager: $PKG_MGR"
+            exit 1
+            ;;
+    esac
+
+    if [ $? -eq 0 ]; then
+        log "Dependencies installed successfully."
+    else
+        echo "[!] Failed to install packages."
+        exit 1
+    fi
+}
+
+detect_os
+install_dependencies
 
 echo "[*] Scanning open ports..."
 
