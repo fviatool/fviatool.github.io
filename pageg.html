@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Facebook Token Checker</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #121212;
+      color: #fff;
+    }
+    textarea {
+      background: #1e1e1e;
+      color: #fff;
+    }
+    table {
+      color: #fff;
+    }
+    .scrollable {
+      max-height: 1100px;
+      overflow-y: auto;
+    }
+    .table thead th {
+      position: sticky;
+      top: 0;
+      background-color: #1f1f1f;
+    }
+  </style>
+</head>
+<body class="p-12">
+
+  <h2 class="mb-4 text-center">✅ Công Cụ Check Token Facebook</h2>
+
+  <div class="mb-3">
+    <textarea id="tokens" class="form-control" rows="6" placeholder="Nhập danh sách token (mỗi dòng 1 token)..."></textarea>
+  </div>
+
+  <button onclick="checkTokens()" class="btn btn-success w-100 mb-3">▶️ Bắt đầu kiểm tra</button>
+
+  <div class="scrollable">
+    <table class="table table-dark table-striped table-bordered table-hover align-middle text-center">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tên</th>
+          <th>UID</th>
+          <th>Email</th>
+          <th>Bạn bè</th>
+          <th>Tổng Page</th>
+          <th>Tổng Like</th>
+          <th>Tổng BM</th>
+          <th>Tổng Group</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody id="result"></tbody>
+    </table>
+  </div>
+
+  <script>
+    async function checkTokens() {
+      const input = document.getElementById("tokens").value.trim();
+      if (!input) return alert("Vui lòng nhập token!");
+
+      const tokens = input.split("\n").map(t => t.trim()).filter(t => t);
+      const resultTable = document.getElementById("result");
+      resultTable.innerHTML = "";
+
+      let index = 0;
+      for (const token of tokens) {
+        index++;
+        const res = await fetch(`https://graph.facebook.com/me?fields=id,name,email&access_token=${token}`);
+        if (!res.ok) {
+          resultTable.innerHTML += `<tr>
+            <td>${index}</td><td colspan="8">❌ Token die hoặc lỗi</td>
+            <td><span class="badge bg-danger">Die</span></td>
+          </tr>`;
+          continue;
+        }
+
+        const data = await res.json();
+        const uid = data.id || "N/A";
+        const name = data.name || "N/A";
+        const email = data.email || "Không có";
+
+        // Tổng bạn bè
+        let totalFriends = "N/A";
+        try {
+          const friendRes = await fetch(`https://graph.facebook.com/${uid}/friends?access_token=${token}`);
+          const friendData = await friendRes.json();
+          totalFriends = friendData.summary?.total_count || 0;
+        } catch {}
+
+        // Tổng page quản lý
+        let totalPage = 0, totalLike = 0;
+        try {
+          const pageRes = await fetch(`https://graph.facebook.com/${uid}/accounts?fields=name,fan_count&access_token=${token}`);
+          const pageData = await pageRes.json();
+          const pages = pageData?.data || [];
+          totalPage = pages.length;
+          totalLike = pages.reduce((sum, p) => sum + (p.fan_count || 0), 0);
+        } catch {}
+
+        // Tổng BM
+        let totalBM = 0;
+        try {
+          const bmRes = await fetch(`https://graph.facebook.com/${uid}/business_users?access_token=${token}`);
+          const bmData = await bmRes.json();
+          totalBM = bmData?.data?.length || 0;
+        } catch {}
+
+        // Group
+        let groups = "Không có";
+        try {
+          const groupRes = await fetch(`https://graph.facebook.com/${uid}/groups?fields=name,id&access_token=${token}`);
+          const groupData = await groupRes.json();
+          groups = groupData?.data?.map(g => `${g.name} (${g.id})`).join(", ") || "Không có";
+        } catch {}
+
+        resultTable.innerHTML += `
+          <tr>
+            <td>${index}</td>
+            <td>${name}</td>
+            <td>${uid}</td>
+            <td>${email}</td>
+            <td>${totalFriends}</td>
+            <td>${totalPage}</td>
+            <td>${totalLike}</td>
+            <td>${totalBM}</td>
+            <td style="max-width:200px;word-break:break-word">${groups}</td>
+            <td><span class="badge bg-success">Live</span></td>
+          </tr>
+        `;
+
+        await new Promise(r => setTimeout(r, 1000)); // Delay 1s tránh spam API
+      }
+    }
+  </script>
+
+</body>
+</html>
