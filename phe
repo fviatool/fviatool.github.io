@@ -31,7 +31,7 @@ install_tools() {
             yum install -y epel-release
             yum install -y curl jq net-tools lsof gawk grep util-linux
             ;;
-        fedora|centos|rhel8|rhel9)
+        fedora|centos|rhel8|rhel9|almalinux)
             dnf install -y curl jq net-tools lsof gawk grep util-linux
             ;;
         *)
