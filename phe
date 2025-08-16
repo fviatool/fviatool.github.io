@@ -1,0 +1,130 @@
+#!/bin/bash
+
+###############################
+# Auto Proxy Checker Script
+# Multi-thread, IPv4
+# Truncate old logs automatically
+###############################
+
+# Detect distro
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        DISTRO=$ID
+    else
+        DISTRO=$(uname -s)
+    fi
+    echo $DISTRO
+}
+
+# Install required tools
+install_tools() {
+    DISTRO=$(detect_distro)
+    echo "Detected distro: $DISTRO"
+
+    case "$DISTRO" in
+        ubuntu|debian|kali)
+            apt-get update -y
+            apt-get install -y curl jq net-tools lsof awk grep xargs sudo
+            ;;
+        centos|rhel)
+            yum install -y epel-release
+            yum install -y curl jq net-tools lsof gawk grep util-linux
+            ;;
+        fedora|centos|rhel8|rhel9)
+            dnf install -y curl jq net-tools lsof gawk grep util-linux
+            ;;
+        *)
+            echo "Unsupported distro: $DISTRO. Please install manually curl, jq, net-tools, lsof, awk, grep, xargs."
+            exit 1
+            ;;
+    esac
+}
+
+# Run installation
+install_tools
+
+# Remove old results
+[ -f live_proxy.txt ] && rm -f live_proxy.txt
+[ -f die_proxy.txt ] && rm -f die_proxy.txt
+[ -f proxy_results.log ] && rm -f proxy_results.log
+[ -f port.txt ] && rm -f port.txt
+
+# Create empty files
+touch live_proxy.txt die_proxy.txt proxy_results.log port.txt
+
+# Get list of listening ports
+ports=$( (netstat -tuln 2>/dev/null | awk '/LISTEN/{print $4}' | grep -oE '[0-9]+$' ; lsof -i -P -n 2>/dev/null | grep LISTEN | awk '{print $9}' | grep -oE '[0-9]+$') | sort -nu )
+
+# Function to get public IP via multiple services
+get_ip(){
+    local port="$1"
+    for svc in https://api64.ipify.org https://httpbin.org/ip https://ifconfig.me http://ipecho.net/plain; do
+        ip=$(curl -s --max-time 15 --proxy http://localhost:$port $svc | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
+        [ -n "$ip" ] && break
+    done
+    echo "$ip"
+}
+
+# Function to get country from IP
+get_country(){
+    local ip="$1"
+    local attempts=0
+    local country=""
+    local apis=(http://ip-api.com/json/$ip https://ipinfo.io/$ip/json https://ipwhois.app/json/$ip)
+    while [[ -z "$country" || "$country"=="null" || "$country"=="Không xác định" ]] && [ $attempts -lt 2 ]; do
+        for api in "${apis[@]}"; do
+            country=$(curl -s --max-time 15 "$api" | jq -r ".country")
+            [[ -n "$country" && "$country" != "null" ]] && break
+        done
+        attempts=$((attempts+1))
+    done
+    [ -z "$country" ] && country="Không xác định"
+    echo "$country"
+}
+
+# Process each port in parallel
+echo "$ports" | xargs -I{} -P200 bash -c '
+port="{}"
+
+# Re-define functions in subshell
+get_ip(){
+    local port="$1"
+    for svc in https://api64.ipify.org https://httpbin.org/ip https://ifconfig.me http://ipecho.net/plain; do
+        ip=$(curl -s --max-time 15 --proxy http://localhost:$port $svc | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
+        [ -n "$ip" ] && break
+    done
+    echo "$ip"
+}
+
+get_country(){
+    local ip="$1"
+    local attempts=0
+    local country=""
+    local apis=(http://ip-api.com/json/$ip https://ipinfo.io/$ip/json https://ipwhois.app/json/$ip)
+    while [[ -z "$country" || "$country"=="null" || "$country"=="Không xác định" ]] && [ $attempts -lt 2 ]; do
+        for api in "${apis[@]}"; do
+            country=$(curl -s --max-time 15 "$api" | jq -r ".country")
+            [[ -n "$country" && "$country" != "null" ]] && break
+        done
+        attempts=$((attempts+1))
+    done
+    [ -z "$country" ] && country="Không xác định"
+    echo "$country"
+}
+
+ip=$(get_ip "$port")
+if [ -n "$ip" ] && [ "$ip" != "null" ]; then
+    country=$(get_country "$ip")
+    speed=$(curl -s --max-time 15 --proxy http://localhost:$port http://speedtest.tele2.net/500MB.zip -o /dev/null -w "%{speed_download}" | awk "{printf \"%.2f Mbps\", \$1/1024/1024}")
+    facebook_speed=$(curl -s --max-time 15 --proxy http://localhost:$port -o /dev/null -w "%{time_total}" "https://www.facebook.com" | awk "{printf \"%.2f s\", \$1}")
+    echo "✅ Port $port | IP: $ip | Quốc gia: $country | Tốc độ: $speed | Facebook load: $facebook_speed" | tee -a live_proxy.txt
+else
+    echo "❌ Port $port failed" | tee -a die_proxy.txt
+fi
+' | tee proxy_results.log
+
+# Save ports to file
+netstat -tuln 2>/dev/null | awk '/LISTEN/ {print $4}' | grep -oE '[0-9]+$' | sort -n | uniq > cong.txt
+
+      
