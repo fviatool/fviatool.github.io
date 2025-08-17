@@ -1,78 +1,12 @@
 #!/bin/bash
-set -euo pipefail
+set +euo pipefail
 
 ###############################
 # Auto Proxy / Tor Checker
 # Multi-thread, IPv4/IPv6
-# Truncate old logs automatically
-###############################
-
-# -------------------------------
-# Detect distro
-detect_distro() {
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        echo "$ID"
-    else
-        uname -s
-    fi
-}
-
-# -------------------------------
-# Install package if missing
-install_if_missing() {
-    local pkg="$1"
-    local distro="$2"
-
-    case "$distro" in
-        ubuntu|debian|kali)
-            if ! dpkg -s "$pkg" >/dev/null 2>&1; then
-                echo "[*] $pkg chưa cài, đang cài..."
-                apt-get update -y
-                apt-get install -y "$pkg"
-            else
-                echo "[*] $pkg đã cài, bỏ qua."
-            fi
-            ;;
-        centos|rhel)
-            if ! rpm -q "$pkg" >/dev/null 2>&1; then
-                echo "[*] $pkg chưa cài, đang cài..."
-                yum install -y "$pkg"
-            else
-                echo "[*] $pkg đã cài, bỏ qua."
-            fi
-            ;;
-        fedora|centos|rhel8|rhel9|almalinux)
-            if ! rpm -q "$pkg" >/dev/null 2>&1; then
-                echo "[*] $pkg chưa cài, đang cài..."
-                dnf install -y "$pkg"
-            else
-                echo "[*] $pkg đã cài, bỏ qua."
-            fi
-            ;;
-        *)
-            echo "Unsupported distro $distro, vui lòng cài $pkg thủ công"
-            ;;
-    esac
-}
-
-# -------------------------------
-# Install required tools if missing
-DISTRO=$(detect_distro)
-TOOLS=(curl jq net-tools lsof gawk grep xargs sudo)
-for pkg in "${TOOLS[@]}"; do
-    install_if_missing "$pkg" "$DISTRO"
-done
-
-echo "[*] Required tools installed or already present."
-
-# -------------------------------
-# Remove old results
-[ -f live_proxy.txt ] && rm -f live_proxy.txt
-[ -f die_proxy.txt ] && rm -f die_proxy.txt
-[ -f proxy_results.log ] && rm -f proxy_results.log
-[ -f port.txt ] && rm -f port.txt
-
+apt-get update -y && apt-get install -y  >/dev/null 2>&1
+yum install -y curl jq net-tools lsof gawk grep xargs sudo >/dev/null 2>&1
+dnf install -y curl jq net-tools lsof gawk grep xargs sudo >/dev/null 2>&1
 # -------------------------------
 # Get list of listening ports
 ports=$( (netstat -tuln 2>/dev/null | awk '/LISTEN/{print $4}' | grep -oE '[0-9]+$' ; \
@@ -86,7 +20,7 @@ get_ip(){
     local port="$1"
     local ip=""
     for svc in https://api64.ipify.org https://httpbin.org/ip https://ifconfig.me http://ipecho.net/plain; do
-        ip=$(curl -s --max-time 15 --proxy http://localhost:$port $svc | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
+        ip=$(curl -s --max-time 10 --proxy http://localhost:$port $svc 2>/dev/null | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
         [ -n "$ip" ] && break
     done
     echo "$ip"
@@ -94,15 +28,11 @@ get_ip(){
 
 get_country(){
     local ip="$1"
-    local attempts=0
     local country=""
     local apis=(http://ip-api.com/json/$ip https://ipinfo.io/$ip/json https://ipwhois.app/json/$ip)
-    while [[ -z "$country" || "$country"=="null" || "$country"=="Không xác định" ]] && [ $attempts -lt 2 ]; do
-        for api in "${apis[@]}"; do
-            country=$(curl -s --max-time 15 "$api" | jq -r ".country")
-            [[ -n "$country" && "$country" != "null" ]] && break
-        done
-        attempts=$((attempts+1))
+    for api in "${apis[@]}"; do
+        country=$(curl -s --max-time 10 "$api" 2>/dev/null | jq -r ".country" 2>/dev/null)
+        [ -n "$country" ] && break
     done
     [ -z "$country" ] && country="Không xác định"
     echo "$country"
@@ -110,49 +40,19 @@ get_country(){
 
 # -------------------------------
 # Process each port in parallel
-echo "$ports" | xargs -I{} -P200 bash -c '
+echo "$ports" | xargs -I{} -P50 bash -c '
 port="{}"
-
-# Redefine functions in subshell
-get_ip(){
-    local port="$1"
-    local ip=""
-    for svc in https://api64.ipify.org https://httpbin.org/ip https://ifconfig.me http://ipecho.net/plain; do
-        ip=$(curl -s --max-time 15 --proxy http://localhost:$port $svc | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
-        [ -n "$ip" ] && break
-    done
-    echo "$ip"
-}
-
-get_country(){
-    local ip="$1"
-    local attempts=0
-    local country=""
-    local apis=(http://ip-api.com/json/$ip https://ipinfo.io/$ip/json https://ipwhois.app/json/$ip)
-    while [[ -z "$country" || "$country"=="null" || "$country"=="Không xác định" ]] && [ $attempts -lt 2 ]; do
-        for api in "${apis[@]}"; do
-            country=$(curl -s --max-time 15 "$api" | jq -r ".country")
-            [[ -n "$country" && "$country" != "null" ]] && break
-        done
-        attempts=$((attempts+1))
-    done
-    [ -z "$country" ] && country="Không xác định"
-    echo "$country"
-}
-
 ip=$(get_ip "$port")
 if [ -n "$ip" ] && [ "$ip" != "null" ]; then
     country=$(get_country "$ip")
-    speed=$(curl -s --max-time 15 --proxy http://localhost:$port http://speedtest.tele2.net/500MB.zip -o /dev/null -w "%{speed_download}" | awk "{printf \"%.2f Mbps\", \$1/1024/1024}")
-    facebook_speed=$(curl -s --max-time 15 --proxy http://localhost:$port -o /dev/null -w "%{time_total}" "https://www.facebook.com" | awk "{printf \"%.2f s\", \$1}")
-    echo "✅ Port $port | IP: $ip | Quốc gia: $country | Tốc độ: $speed | Facebook load: $facebook_speed" | tee -a live_proxy.txt
+    echo "✅ Port $port | IP: $ip | Quốc gia: $country" >> live_proxy.txt 2>/dev/null
 else
-    echo "❌ Port $port failed" | tee -a die_proxy.txt
+    echo "❌ Port $port failed" >> die_proxy.txt 2>/dev/null
 fi
-' | tee proxy_results.log
+'
 
 # -------------------------------
 # Save ports to file
-netstat -tuln 2>/dev/null | awk '/LISTEN/ {print $4}' | grep -oE '[0-9]+$' | sort -n | uniq > cong.txt
+echo "$ports" > cong.txt 2>/dev/null
 
-echo "[*] Proxy check complete. Results in live_proxy.txt / die_proxy.txt / proxy_results.log"
+echo "[*] Proxy/Tor check complete. Results in live_proxy.txt / die_proxy.txt / cong.txt"
