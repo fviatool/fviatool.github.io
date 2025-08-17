@@ -1,64 +1,74 @@
 #!/bin/bash
+set -euo pipefail
 
 ###############################
-# Auto Proxy Checker Script
-# Multi-thread, IPv4
+# Auto Proxy / Tor Checker
+# Multi-thread, IPv4/IPv6
 # Truncate old logs automatically
 ###############################
 
+# -------------------------------
 # Detect distro
 detect_distro() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        DISTRO=$ID
+        echo "$ID"
     else
-        DISTRO=$(uname -s)
+        uname -s
     fi
-    echo $DISTRO
 }
 
-# Install required tools
-install_tools() {
-    DISTRO=$(detect_distro)
-    echo "Detected distro: $DISTRO"
+# -------------------------------
+# Install package if missing
+install_if_missing() {
+    local pkg="$1"
+    local distro="$2"
 
-    case "$DISTRO" in
+    case "$distro" in
         ubuntu|debian|kali)
-            apt-get update -y
-            apt-get install -y curl jq net-tools lsof awk grep xargs sudo
+            dpkg -s "$pkg" >/dev/null 2>&1 || apt-get install -y "$pkg"
             ;;
         centos|rhel)
-            yum install -y epel-release
-            yum install -y curl jq net-tools lsof gawk grep util-linux
+            rpm -q "$pkg" >/dev/null 2>&1 || yum install -y "$pkg"
             ;;
         fedora|centos|rhel8|rhel9|almalinux)
-            dnf install -y curl jq net-tools lsof gawk grep util-linux
+            rpm -q "$pkg" >/dev/null 2>&1 || dnf install -y "$pkg"
             ;;
         *)
-            echo "Unsupported distro: $DISTRO. Please install manually curl, jq, net-tools, lsof, awk, grep, xargs."
-            exit 1
+            echo "Unsupported distro $distro, please install $pkg manually"
             ;;
     esac
 }
 
-# Run installation
-install_tools
+# -------------------------------
+# Install required tools
+DISTRO=$(detect_distro)
+TOOLS=(curl jq net-tools lsof awk grep xargs sudo)
+for pkg in "${TOOLS[@]}"; do
+    install_if_missing "$pkg" "$DISTRO"
+done
 
+echo "[*] Required tools installed or already present."
+
+# -------------------------------
 # Remove old results
 [ -f live_proxy.txt ] && rm -f live_proxy.txt
 [ -f die_proxy.txt ] && rm -f die_proxy.txt
 [ -f proxy_results.log ] && rm -f proxy_results.log
 [ -f port.txt ] && rm -f port.txt
 
-# Create empty files
-touch live_proxy.txt die_proxy.txt proxy_results.log port.txt
-
+# -------------------------------
 # Get list of listening ports
-ports=$( (netstat -tuln 2>/dev/null | awk '/LISTEN/{print $4}' | grep -oE '[0-9]+$' ; lsof -i -P -n 2>/dev/null | grep LISTEN | awk '{print $9}' | grep -oE '[0-9]+$') | sort -nu )
+ports=$( (netstat -tuln 2>/dev/null | awk '/LISTEN/{print $4}' | grep -oE '[0-9]+$' ; \
+         lsof -i -P -n 2>/dev/null | grep LISTEN | awk '{print $9}' | grep -oE '[0-9]+$') | sort -nu )
 
-# Function to get public IP via multiple services
+echo "[*] Detected listening ports: $ports"
+
+# -------------------------------
+# Functions
 get_ip(){
     local port="$1"
+    local ip=""
     for svc in https://api64.ipify.org https://httpbin.org/ip https://ifconfig.me http://ipecho.net/plain; do
         ip=$(curl -s --max-time 15 --proxy http://localhost:$port $svc | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
         [ -n "$ip" ] && break
@@ -66,7 +76,6 @@ get_ip(){
     echo "$ip"
 }
 
-# Function to get country from IP
 get_country(){
     local ip="$1"
     local attempts=0
@@ -83,13 +92,15 @@ get_country(){
     echo "$country"
 }
 
+# -------------------------------
 # Process each port in parallel
 echo "$ports" | xargs -I{} -P200 bash -c '
 port="{}"
 
-# Re-define functions in subshell
+# Redefine functions in subshell
 get_ip(){
     local port="$1"
+    local ip=""
     for svc in https://api64.ipify.org https://httpbin.org/ip https://ifconfig.me http://ipecho.net/plain; do
         ip=$(curl -s --max-time 15 --proxy http://localhost:$port $svc | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
         [ -n "$ip" ] && break
@@ -124,7 +135,8 @@ else
 fi
 ' | tee proxy_results.log
 
+# -------------------------------
 # Save ports to file
 netstat -tuln 2>/dev/null | awk '/LISTEN/ {print $4}' | grep -oE '[0-9]+$' | sort -n | uniq > cong.txt
 
-      
+echo "[*] Proxy check complete. Results in live_proxy.txt / die_proxy.txt / proxy_results.log"
