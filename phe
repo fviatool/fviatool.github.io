@@ -26,24 +26,40 @@ install_if_missing() {
 
     case "$distro" in
         ubuntu|debian|kali)
-            dpkg -s "$pkg" >/dev/null 2>&1 || apt-get install -y "$pkg"
+            if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+                echo "[*] $pkg chưa cài, đang cài..."
+                apt-get update -y
+                apt-get install -y "$pkg"
+            else
+                echo "[*] $pkg đã cài, bỏ qua."
+            fi
             ;;
         centos|rhel)
-            rpm -q "$pkg" >/dev/null 2>&1 || yum install -y "$pkg"
+            if ! rpm -q "$pkg" >/dev/null 2>&1; then
+                echo "[*] $pkg chưa cài, đang cài..."
+                yum install -y "$pkg"
+            else
+                echo "[*] $pkg đã cài, bỏ qua."
+            fi
             ;;
         fedora|centos|rhel8|rhel9|almalinux)
-            rpm -q "$pkg" >/dev/null 2>&1 || dnf install -y "$pkg"
+            if ! rpm -q "$pkg" >/dev/null 2>&1; then
+                echo "[*] $pkg chưa cài, đang cài..."
+                dnf install -y "$pkg"
+            else
+                echo "[*] $pkg đã cài, bỏ qua."
+            fi
             ;;
         *)
-            echo "Unsupported distro $distro, please install $pkg manually"
+            echo "Unsupported distro $distro, vui lòng cài $pkg thủ công"
             ;;
     esac
 }
 
 # -------------------------------
-# Install required tools
+# Install required tools if missing
 DISTRO=$(detect_distro)
-TOOLS=(curl jq net-tools lsof awk grep xargs sudo)
+TOOLS=(curl jq net-tools lsof gawk grep xargs sudo)
 for pkg in "${TOOLS[@]}"; do
     install_if_missing "$pkg" "$DISTRO"
 done
