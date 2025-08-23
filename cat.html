@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ Tách Ảnh Sản phẩm Hàng loạt</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+        h1 {
+            color: #b71c1c;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 20px;
+            margin-top: 0;
+        }
+        .upload-area {
+            border: 3px dashed #c62828;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            background-color: #fe F8f8;
+            margin-bottom: 30px;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            background-color: #ffebee;
+            border-color: #d32f2f;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        #results-area {
+            margin-top: 30px;
+        }
+        .file-group {
+            margin-bottom: 40px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .file-group-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .file-group-title code {
+            font-family: monospace;
+            background-color: #eee;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        .result-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #fafafa;
+            text-align: center;
+        }
+        canvas {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto 15px auto;
+            border-radius: 4px;
+        }
+        a.download-button {
+            display: inline-block;
+            padding: 8px 18px;
+            background-color: #d32f2f;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 500;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        a.download-button:hover {
+            background-color: #b71c1c;
+            transform: translateY(-2px);
+        }
+        .hidden { display: none; }
+        #status-message {
+            text-align: center; font-size: 1.1em; padding: 20px;
+            border-radius: 8px; color: #333; background-color: #fffde7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Công cụ Tách Ảnh Sản phẩm Hàng loạt (v4)</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 25px;">
+            Hỗ trợ chọn nhiều tệp. Tự động tách từng sản phẩm và chỉ giữ lại hình ảnh.
+        </p>
+        
+        <label for="imageLoader" class="upload-area" id="upload-label">
+            <div><strong>Nhấn hoặc Kéo thả tệp vào đây để chọn ảnh</strong></div>
+            <input type="file" id="imageLoader" name="imageLoader" accept="image/*" multiple/>
+        </label>
+        
+        <div id="status-message" class="hidden"></div>
+        <div id="results-area"></div>
+    </div>
+
+    <script>
+    const imageLoader = document.getElementById('imageLoader');
+    const uploadLabel = document.getElementById('upload-label');
+    const resultsArea = document.getElementById('results-area');
+    const statusMessage = document.getElementById('status-message');
+
+    imageLoader.addEventListener('change', handleFileSelect);
+    
+    // Drag and Drop functionality
+    uploadLabel.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadLabel.classList.add('dragover');
+    });
+    uploadLabel.addEventListener('dragleave', () => {
+        uploadLabel.classList.remove('dragover');
+    });
+    uploadLabel.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadLabel.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length) {
+            imageLoader.files = files;
+            handleFileSelect({ target: imageLoader });
+        }
+    });
+
+    async function handleFileSelect(e) {
+        const files = e.target.files;
+        if (!files.length) return;
+
+        statusMessage.textContent = `Đang xử lý ${files.length} tệp, vui lòng chờ...`;
+        statusMessage.classList.remove('hidden');
+        resultsArea.innerHTML = '';
+        
+        const allPromises = Array.from(files).map(file => processFile(file));
+        await Promise.all(allPromises);
+
+        statusMessage.classList.add('hidden');
+    }
+
+    function processFile(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const productImages = findAndExtractProducts(img);
+                    displayResultsForFile(file.name, productImages);
+                    resolve();
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function findAndExtractProducts(img) {
+        const startX = Math.floor(img.width / 2);
+        const workWidth = img.width - startX;
+        const workHeight = img.height;
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = workWidth;
+        tempCanvas.height = workHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(img, startX, 0, workWidth, workHeight, 0, 0, workWidth, workHeight);
+        
+        const imageData = tempCtx.getImageData(0, 0, workWidth, workHeight);
+        
+        const productBlocks = findProductBlocks(imageData, workWidth, workHeight);
+        
+        const finalImages = productBlocks.map(block => {
+            // Cut level 1: Crop the block from the main canvas
+            const blockCanvas = document.createElement('canvas');
+            blockCanvas.width = block.right - block.left;
+            blockCanvas.height = block.bottom - block.top;
+            blockCanvas.getContext('2d').drawImage(tempCanvas, block.left, block.top, blockCanvas.width, blockCanvas.height, 0, 0, blockCanvas.width, blockCanvas.height);
+            
+            // Cut level 2: Extract just the photo from the block
+            return extractPhotoImage(blockCanvas);
+        });
+
+        return finalImages;
+    }
+
+    function findProductBlocks(imageData, width, height) {
+        const bgThreshold = 245;
+        const gapMinHeight = 20;
+        const data = imageData.data;
+        let productBounds = [];
+        let inProduct = false;
+        let currentTop = 0;
+        let whiteLineCount = 0;
+
+        for (let y = 0; y < height; y++) {
+            let isLineWhite = true;
+            for (let x = 0; x < width; x++) {
+                const i = (y * width + x) * 4;
+                if (data[i] < bgThreshold || data[i+1] < bgThreshold || data[i+2] < bgThreshold) {
+                    isLineWhite = false;
+                    break;
+                }
+            }
+            if (!isLineWhite && !inProduct) {
+                inProduct = true;
+                currentTop = y;
+                whiteLineCount = 0;
+            } else if (isLineWhite && inProduct) {
+                whiteLineCount++;
+            } else if (!isLineWhite && inProduct) {
+                whiteLineCount = 0;
+            }
+            if (inProduct && (whiteLineCount >= gapMinHeight || y === height - 1)) {
+                let bottom = y - whiteLineCount;
+                if ((bottom - currentTop) > 50) { // Filter out small noise
+                    let { left, right } = findHorizontalBounds(imageData, width, currentTop, bottom);
+                    if ((right - left) > 50) {
+                        productBounds.push({ top: currentTop, bottom, left, right });
+                    }
+                }
+                inProduct = false;
+                whiteLineCount = 0;
+            }
+        }
+        return productBounds;
+    }
+
+    function findHorizontalBounds(imageData, width, top, bottom) {
+        let left = width, right = 0;
+        const bgThreshold = 245;
+        for (let y = top; y <= bottom; y++) {
+            for (let x = 0; x < width; x++) {
+                const i = (y * width + x) * 4;
+                if (imageData.data[i] < bgThreshold || imageData.data[i+1] < bgThreshold || imageData.data[i+2] < bgThreshold) {
+                    if (x < left) left = x;
+                    if (x > right) right = x;
+                }
+            }
+        }
+        return { left, right };
+    }
+
+    function extractPhotoImage(blockCanvas) {
+        const ctx = blockCanvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, blockCanvas.width, blockCanvas.height);
+        const { data, width, height } = imageData;
+        const bgThreshold = 245;
+
+        // Scan from bottom up to find the image top
+        let imageTop = 0;
+        let consecutiveWhiteLines = 0;
+        for (let y = height - 1; y >= 0; y--) {
+            let isLineWhite = true;
+            for (let x = 0; x < width; x++) {
+                const i = (y * width + x) * 4;
+                if (data[i] < bgThreshold || data[i+1] < bgThreshold || data[i+2] < bgThreshold) {
+                    isLineWhite = false;
+                    break;
+                }
+            }
+            if (isLineWhite) {
+                consecutiveWhiteLines++;
+            } else {
+                consecutiveWhiteLines = 0;
+            }
+            // If we found a significant gap, the image is below it
+            if (consecutiveWhiteLines > 10) {
+                imageTop = y + 10;
+                break;
+            }
+        }
+        
+        let { left, right } = findHorizontalBounds(imageData, width, imageTop, height - 1);
+        let bottom = height;
+        
+        // Add padding
+        const padding = 15;
+        const cropX = Math.max(0, left - padding);
+        const cropY = Math.max(0, imageTop - padding);
+        const cropWidth = Math.min(width, right + padding) - cropX;
+        const cropHeight = Math.min(height, bottom + padding) - cropY;
+
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = cropWidth;
+        finalCanvas.height = cropHeight;
+        const finalCtx = finalCanvas.getContext('2d');
+        finalCtx.fillStyle = 'white';
+        finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+        finalCtx.drawImage(blockCanvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+        
+        return finalCanvas;
+    }
+
+    function displayResultsForFile(fileName, productCanvases) {
+        if (!productCanvases.length) return;
+
+        const fileGroup = document.createElement('div');
+        fileGroup.className = 'file-group';
+        
+        const title = document.createElement('h2');
+        title.className = 'file-group-title';
+        title.innerHTML = `Kết quả từ tệp: <code>${fileName}</code>`;
+        
+        const productsGrid = document.createElement('div');
+        productsGrid.className = 'products-grid';
+
+        productCanvases.forEach((canvas, index) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'result-item';
+            
+            itemDiv.appendChild(canvas);
+
+            const downloadBtn = document.createElement('a');
+            downloadBtn.className = 'download-button';
+            downloadBtn.textContent = 'Tải về';
+            downloadBtn.href = canvas.toDataURL('image/png');
+            downloadBtn.download = `${fileName.split('.').slice(0, -1).join('.')}-product-${index + 1}.png`;
+            
+            itemDiv.appendChild(downloadBtn);
+            productsGrid.appendChild(itemDiv);
+        });
+
+        fileGroup.appendChild(title);
+        fileGroup.appendChild(productsGrid);
+        resultsArea.appendChild(fileGroup);
+    }
+    </script>
+</body>
+</html>
