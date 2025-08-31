@@ -1,33 +1,27 @@
 #!/bin/bash
+set -e
 
-# ✅ Yêu cầu quyền root
+# ✅ Kiểm tra quyền root
 if [ "$EUID" -ne 0 ]; then
-    echo "⚠️  Vui lòng chạy script với quyền root"
+    echo "⚠️ Vui lòng chạy script với quyền root"
     exit 1
 fi
 
 # Danh sách các công cụ cần thiết
 REQUIRED_TOOLS=(curl jq net-tools lsof awk grep xargs sudo)
 
-# Hàm: Kiểm tra xem đã cài đủ chưa
-are_tools_installed() {
-    MISSING=()
+# Hàm kiểm tra tool thiếu
+check_tools() {
+    local MISSING=()
     for tool in "${REQUIRED_TOOLS[@]}"; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             MISSING+=("$tool")
         fi
     done
-
-    if [ "${#MISSING[@]}" -eq 0 ]; then
-        return 0  # Đã cài đủ
-    else
-        echo "🔍 Thiếu các công cụ sau: ${MISSING[*]}"
-        REQUIRED_TOOLS=("${MISSING[@]}")
-        return 1
-    fi
+    echo "${MISSING[@]}"
 }
 
-# Hàm: Xác định distro
+# Hàm phát hiện distro
 detect_distro() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -37,39 +31,35 @@ detect_distro() {
     fi
 }
 
-# Hàm: Cài đặt công cụ nếu thiếu
-install_tools() {
-    DISTRO=$(detect_distro)
-    echo "📦 Phát hiện hệ điều hành: $DISTRO"
+# Kiểm tra tool
+MISSING_TOOLS=($(check_tools))
+if [ ${#MISSING_TOOLS[@]} -eq 0 ]; then
+    echo "🎉 Tất cả công cụ đã sẵn sàng."
+    exit 0
+fi
 
-    if are_tools_installed; then
-        echo "✅ Đã có đầy đủ công cụ. Không cần cài thêm."
-        return
-    fi
+# Nếu còn thiếu, cài đặt im lặng
+DISTRO=$(detect_distro)
 
-    echo "⚙️  Đang cài đặt các công cụ còn thiếu..."
+case "$DISTRO" in
+    ubuntu|debian|kali)
+        apt-get update -qq
+        apt-get install -y -qq "${MISSING_TOOLS[@]}"
+        ;;
+    centos|rhel)
+        yum install -y -q epel-release
+        yum install -y -q "${MISSING_TOOLS[@]}"
+        ;;
+    fedora|almalinux)
+        dnf install -y -q "${MISSING_TOOLS[@]}"
+        ;;
+    *)
+        echo "❌ Không hỗ trợ hệ điều hành: $DISTRO"
+        exit 1
+        ;;
+esac
 
-    case "$DISTRO" in
-        ubuntu|debian|kali)
-            apt-get update -y && apt-get install -y "${REQUIRED_TOOLS[@]}"
-            ;;
-        centos|rhel)
-            yum install -y epel-release && yum install -y "${REQUIRED_TOOLS[@]}"
-            ;;
-        fedora|almalinux)
-            dnf install -y "${REQUIRED_TOOLS[@]}"
-            ;;
-        *)
-            echo "❌ Không hỗ trợ hệ điều hành: $DISTRO"
-            return 1
-            ;;
-    esac
-
-    echo "✅ Cài đặt hoàn tất."
-}
-
-# 🔧 Cài đặt công cụ nếu cần
-install_tools
+echo "✅ Cài đặt công cụ."
 
 # 🧹 Dọn dẹp file cũ
 rm -f live_proxy.txt die_proxy.txt proxy_results.log port.txt cong.txt 2>/dev/null
