@@ -1,255 +1,171 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🚀 Check danh sách UID</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to right, #e0f7fa, #fce4ec);
-      padding: 30px;
-    }
-
-    .container {
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.1);
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 30px;
-      color: #007bff;
-    }
-
-    label {
-      font-weight: bold;
-    }
-
-    textarea {
-      width: 100%;
-      height: 150px;
-      margin-bottom: 15px;
-      resize: vertical;
-      font-family: monospace;
-      background: #f9f9f9;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      padding: 10px;
-    }
-
-    button {
-      display: block;
-      width: 100%;
-      padding: 12px;
-      font-weight: bold;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      transition: background 0.3s ease;
-      margin-bottom: 20px;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-
-    .status {
-      margin-bottom: 10px;
-      font-weight: bold;
-    }
-
-    .status span {
-      color: #d32f2f;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: center;
-    }
-
-    th {
-      background-color: #007bff;
-      color: white;
-    }
-
-    tr:nth-child(even) {
-      background-color: #f2f2f2;
-    }
-
-    .live {
-      background-color: #d0f0c0;
-    }
-
-    .die {
-      background-color: #ffcdd2;
-    }
-
-    .loading {
-      background-color: #fff59d;
-    }
-
-    @media (max-width: 900px) {
-      textarea {
-        height: 100px;
-      }
-
-      th, td {
-        font-size: 13px;
-        padding: 6px;
-      }
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🚀 Check UID Facebook</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f4f4f4;padding:15px;}
+textarea{width:100%;height:100px;margin-bottom:8px;resize:none;font-family:monospace;}
+button{padding:6px 12px;background:#007bff;color:#fff;border:none;cursor:pointer;margin-right:5px;font-size:14px;}
+button:hover{background:#0056b3;}
+.table-wrapper{max-height:400px;overflow-y:auto;margin-top:10px;background:#fff;border:1px solid #ddd;border-radius:4px;}
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid #ddd;padding:5px;text-align:center;white-space:nowrap;font-size:13px;}
+th{background:#007bff;color:#fff;position:sticky;top:0;z-index:10;}
+tr:nth-child(even){background:#f2f2f2;}
+.live{background:#c8e6c9;}
+</style>
 </head>
 <body>
 
-  <div class="text-center">
-    <h2>🚀 Check danh sách UID Facebook</h2>
+<h3>🚀 Check UID Facebook</h3>
 
-    <label>Nhập danh sách UID (mỗi dòng 1 UID):</label>
-    <textarea id="uids" placeholder="1000xxxxxxxxxx"></textarea>
+<label>Chọn nhiều file UID (.txt lớn):</label>
+<input type="file" id="fileInput" accept=".txt" multiple style="margin-bottom:8px;" /><br>
 
-    <label>Nhập danh sách token (mỗi dòng 1 token):</label>
-    <textarea id="tokens" placeholder="EAAG..."></textarea>
+<label>Hoặc nhập UID (mỗi dòng 1 UID):</label>
+<textarea id="uids" placeholder="1000xxxxxxxxxx"></textarea><br>
 
-    <p class="status">👉 Token Live: <span id="liveCount">0</span></p>
-    <p class="status">📋 Tổng UID: <span id="uidCount">0</span></p>
+<label>Nhập token (mỗi dòng 1 token):</label>
+<textarea id="tokens" placeholder="EAAG..."></textarea><br>
 
-    <button onclick="startCheck()">🚀 Bắt đầu Check</button>
+<button id="checkTokenBtn">✅ Check Token Live</button>
+<button id="copyTokenBtn">📋 Copy Token Live</button>
+<button onclick="startCheckFast()">🚀 Bắt đầu Check UID</button>
+<button id="copyBtn">📋 Copy kết quả</button>
 
-    <div class="table-responsive">
-      <table id="result">
-        <thead>
-          <tr>
-            <th>UID</th>
-            <th>Tên</th>
-            <th>Quốc Gia</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Bạn bè</th>
-            <th>Ngày tạo</th>
-            <th>Trạng thái</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
+<p>✅ Token Live: <span id="liveCount">0</span></p>
+<p>✅ Tổng UID check: <span id="checkedCount">0</span></p>
+<p id="fileMessage" style="color:green;"></p> <!-- Thông báo số UID đã lọc trùng -->
 
- 
+<div class="table-wrapper">
+<table id="result">
+<thead>
+<tr><th>UID</th><th>Tên</th><th>Vị trí</th><th>Công việc</th><th>Học vấn</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
 
-  <script>
-    let liveTokens = [];
+<script>
+let liveTokens=[];
 
-    async function isTokenLive(token) {
-      try {
-        const res = await fetch(`https://graph.facebook.com/me?access_token=${token}`);
-        const json = await res.json();
-        return !!json.id;
-      } catch {
-        return false;
-      }
-    }
-
-    async function checkTokensLive() {
-      const input = document.getElementById("tokens");
-      const lines = input.value.trim().split("\n").map(t => t.trim()).filter(Boolean);
-      liveTokens = [];
-      for (const token of lines) {
-        if (await isTokenLive(token)) liveTokens.push(token);
-      }
-      input.value = liveTokens.join("\n");
-      document.getElementById("liveCount").innerText = liveTokens.length;
-    }
-
-    async function fetchUserInfo(uid, token) {
-      const fields = "name,location,hometown,email,mobile_phone,friends.limit(0)";
-      const url = `https://graph.facebook.com/${uid}?fields=${fields}&access_token=${token}`;
-      const res = await fetch(url);
-      return res.json();
-    }
-
-    async function fetchCreatedTime(uid, token) {
-      try {
-        const res = await fetch(`https://graph.facebook.com/${uid}?metadata=1&access_token=${token}`);
-        const data = await res.json();
-        return data?.metadata?.created_time || "Không rõ";
-      } catch {
-        return "Không rõ";
-      }
-    }
-
-    async function handleUID(uid, token, tbody) {
-      const tr = document.createElement("tr");
-      tr.className = "loading";
-      tr.innerHTML = `<td>${uid}</td><td colspan="10">Đang tải...</td>`;
-      tbody.appendChild(tr);
-
-      try {
-        const data = await fetchUserInfo(uid, token);
-        if (data.error) {
-          tr.className = "die";
-          tr.innerHTML = `<td>${uid}</td><td colspan="10">❌ ${data.error.message}</td>`;
-        } else {
-          const createdTime = await fetchCreatedTime(uid, token);
-          tr.className = "live";
-          tr.innerHTML = `
-            <td>${uid}</td>
-            <td>${data.name || "Không rõ"}</td>
-            <td>${data.location?.name || "Không rõ"} | ${data.hometown?.name || "Không rõ"}</td>
-            <td>${data.email || "Không có"}</td>
-            <td>${data.mobile_phone || "Không có"}</td>
-            <td>${data.friends?.summary?.total_count || 0}</td>
-            <td>${createdTime}</td>
-            <td>✅ Live</td>
-          `;
-        }
-      } catch {
-        tr.className = "die";
-        tr.innerHTML = `<td>${uid}</td><td colspan="10">❌ Lỗi không xác định</td>`;
-      }
-    }
-
-    async function startCheck() {
-  await checkTokensLive();
-  const uidList = document.getElementById("uids").value.trim().split("\n").filter(Boolean);
-  const tbody = document.querySelector("#result tbody");
-  tbody.innerHTML = "";
-  document.getElementById("uidCount").innerText = uidList.length; // 👉 cập nhật tổng UID
-  if (!uidList.length || !liveTokens.length) return alert("Nhập UID và đảm bảo có token live.");
-
-  const batchSize = 5;
-  let index = 0;
-  while (index < uidList.length) {
-    const batch = uidList.slice(index, index + batchSize);
-    await Promise.all(batch.map((uid, i) => {
-      const token = liveTokens[(index + i) % liveTokens.length];
-      return handleUID(uid, token, tbody);
-    }));
-    index += batchSize;
-    await new Promise(r => setTimeout(r, 800));
-  }
+// Lọc trùng UID
+function removeDuplicateUIDs(){
+    const textarea=document.getElementById('uids');
+    const lines=textarea.value.trim().split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    const uniqueLines=Array.from(new Set(lines));
+    textarea.value=uniqueLines.join("\n");
+    return uniqueLines;
 }
 
-    document.getElementById("tokens").addEventListener("input", () => {
-      setTimeout(checkTokensLive, 1000);
-    });
-  </script>
+// Check token live
+async function checkTokensLive(){
+    const lines=document.getElementById("tokens").value.trim().split("\n").map(t=>t.trim()).filter(Boolean);
+    liveTokens=[];
+    await Promise.all(lines.map(async t=>{
+        try{
+            const res=await fetch(`https://graph.facebook.com/me?access_token=${t}`);
+            const json=await res.json();
+            if(json.id) liveTokens.push(t);
+        }catch{}
+    }));
+    document.getElementById("tokens").value=liveTokens.join("\n");
+    document.getElementById("liveCount").innerText=liveTokens.length;
+    alert(`✅ ${liveTokens.length} token live`);
+}
+document.getElementById("checkTokenBtn").addEventListener("click",checkTokensLive);
+document.getElementById("copyTokenBtn").addEventListener("click",()=>{
+    if(liveTokens.length===0) return alert("Không có token live");
+    navigator.clipboard.writeText(liveTokens.join("\n")).then(()=>alert("✅ Đã copy token live"));
+});
 
+// Lấy info user
+async function fetchUserInfo(uid, token){
+    const fields="name,location,email,work,education";
+    const url=`https://graph.facebook.com/${uid}?fields=${fields}&access_token=${token}`;
+    const res=await fetch(url);
+    return res.json();
+}
+
+function updateCheckedCount(){
+    const tbody=document.querySelector("#result tbody");
+    document.getElementById("checkedCount").innerText=tbody.querySelectorAll("tr").length;
+}
+
+async function handleUID(uid,token,tbody){
+    try{
+        const data=await fetchUserInfo(uid,token);
+        if(data.error) return; // Không hiển thị UID lỗi
+        const pos=data.location?.name||"Không rõ";
+        const workInfo=data.work?.map(w=>w.employer?.name).join(", ")||"Không có";
+        const eduInfo=data.education?.map(e=>e.school?.name).join(", ")||"Không có";
+        const tr=document.createElement("tr");
+        tr.innerHTML=`<td>${uid}</td><td>${data.name||"Không rõ"}</td><td>${pos}</td><td>${workInfo}</td><td>${eduInfo}</td>`;
+        tr.className="live";
+        tbody.appendChild(tr);
+    }catch{}
+    updateCheckedCount();
+}
+
+// Check nhanh nhiều token
+async function startCheckFast(){
+    const uidList=removeDuplicateUIDs();
+    if(uidList.length===0) return alert("Vui lòng nhập UID");
+    if(liveTokens.length===0) return alert("Không có token live");
+    const tbody=document.querySelector("#result tbody");
+    tbody.innerHTML="";
+    const batchSize=50;
+    let index=0;
+    while(index<uidList.length){
+        const batches=liveTokens.map((token,i)=>{
+            const uids=uidList.slice(index+i*batchSize,index+(i+1)*batchSize);
+            return {token,uids};
+        });
+        await Promise.all(batches.map(async ({token,uids})=>{
+            await Promise.all(uids.map(uid=>handleUID(uid,token,tbody)));
+        }));
+        index+=batchSize*liveTokens.length;
+        await new Promise(r=>setTimeout(r,200));
+    }
+}
+
+// Copy kết quả
+document.getElementById("copyBtn").addEventListener("click",()=>{
+    const tbody=document.querySelector("#result tbody");
+    if(!tbody.hasChildNodes()) return alert("Không có dữ liệu");
+    const rows=Array.from(tbody.querySelectorAll("tr"));
+    let text="UID|Tên|Vị trí|Công việc|Học vấn\n";
+    rows.forEach(row=>{
+        const cells=Array.from(row.querySelectorAll("td")).map(td=>td.innerText.trim());
+        text+=cells.join("|")+"\n";
+    });
+    navigator.clipboard.writeText(text).then(()=>alert("✅ Đã copy kết quả"));
+});
+
+// Mở nhiều file lớn và lọc trùng, hiển thị thông báo
+document.getElementById('fileInput').addEventListener('change', function(e){
+    const files = e.target.files;
+    if(!files.length) return;
+    let allUIDs = [];
+    let filesRead = 0;
+
+    Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(evt){
+            const lines = evt.target.result.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            allUIDs = allUIDs.concat(lines);
+            filesRead++;
+            if(filesRead === files.length){
+                const uniqueUIDs = Array.from(new Set(allUIDs));
+                document.getElementById('uids').value = uniqueUIDs.join("\n");
+                document.getElementById('fileMessage').innerText = `✅ Đã lọc trùng: ${uniqueUIDs.length} UID từ ${files.length} file`;
+            }
+        };
+        reader.readAsText(file);
+    });
+});
+</script>
 </body>
 </html>
