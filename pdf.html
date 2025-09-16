@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chỉnh sửa và Xóa thông tin trên Canvas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #canvas {
+            border: 1px solid #000;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .controls {
+            margin-top: 10px;
+        }
+    </style>
+    
+    <style>
+        body {
+            padding-top: 50px;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .panel-heading {
+            background-color: #5cb85c;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 15px;
+            text-align: center;
+        }
+
+        #uidInput {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background-color: #5cb85c;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        #result {
+            margin-top: 20px;
+        }
+
+        p#loadingMessage {
+            display: none;
+            font-size: 16px;
+            color: #5bc0de;
+            margin-top: 10px;
+        }
+
+        #totalUID {
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .green-text {
+            color: green;
+            font-weight: bold;
+        }
+
+        .red-text {
+            color: red;
+            font-style: italic;
+        }
+
+        .highlight-text {
+            background-color: yellow;
+        }
+    </style>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Canvas + Chỉnh sửa HTML</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    canvas {
+      border: 1px solid #000;
+      margin-top: 10px;
+      max-width: 100%;
+    }
+    textarea {
+      width: 100%;
+      height: 300px;
+      margin-top: 20px;
+      display: none;
+    }
+    .btn {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Chỉnh sửa ảnh & HTML</h2>
+
+  <!-- Vẽ ảnh & chữ -->
+  <input type="file" id="file-input" accept="image/png">
+  <input type="text" id="text-input" placeholder="Nhập chữ để vẽ">
+  <button onclick="convertToCanvas()" class="btn">Chuyển ảnh lên canvas</button>
+  <button onclick="drawText()" class="btn">Vẽ chữ lên ảnh</button>
+
+  <br><br>
+  <canvas id="canvas" width="800" height="600"></canvas>
+
+  <!-- Chỉnh sửa HTML -->
+  <br><br>
+  <button onclick="enableEdit()" class="btn">Chỉnh sửa HTML trang</button>
+  <button onclick="applyHTML()" class="btn">Áp dụng HTML đã chỉnh</button>
+  <textarea id="html-editor"></textarea>
+
+  <!-- Copy HTML -->
+  <br>
+  <button onclick="copyHTML()" class="btn">Copy toàn bộ HTML</button>
+
+  <script>
+    let canvas = document.getElementById('canvas');
+    let context = canvas.getContext('2d');
+    let img = new Image();
+
+    function convertToCanvas() {
+      const fileInput = document.getElementById('file-input');
+      const file = fileInput.files[0];
+
+      if (file && file.type === 'image/png') {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        img.onload = function() {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          context.drawImage(img, 0, 0);
+        };
+      } else {
+        alert('Vui lòng chọn file PNG');
+      }
+    }
+
+    function drawText() {
+      const text = document.getElementById('text-input').value;
+      context.drawImage(img, 0, 0);
+      context.font = '24px Arial';
+      context.fillStyle = 'black';
+      context.fillText(text, 50, 50);
+    }
+
+    function enableEdit() {
+      const html = document.documentElement.outerHTML;
+      document.getElementById('html-editor').value = html;
+      document.getElementById('html-editor').style.display = 'block';
+    }
+
+    function applyHTML() {
+      const html = document.getElementById('html-editor').value;
+      document.open();
+      document.write(html);
+      document.close();
+    }
+
+    function copyHTML() {
+      const htmlContent = document.documentElement.outerHTML;
+      const textArea = document.createElement('textarea');
+      textArea.value = htmlContent;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('HTML đã được sao chép vào clipboard');
+    }
+  </script>
+
+</body>
+</html>

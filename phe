@@ -1,0 +1,148 @@
+#!/bin/bash
+set -e
+
+# ✅ Kiểm tra quyền root
+if [ "$EUID" -ne 0 ]; then
+    echo "⚠️ Vui lòng chạy script với quyền root"
+    exit 1
+fi
+
+# Danh sách các công cụ cần thiết
+REQUIRED_TOOLS=(curl jq net-tools lsof awk grep xargs sudo)
+
+# Hàm kiểm tra tool thiếu
+check_tools() {
+    local MISSING=()
+    for tool in "${REQUIRED_TOOLS[@]}"; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            MISSING+=("$tool")
+        fi
+    done
+    echo "${MISSING[@]}"
+}
+
+# Hàm phát hiện distro
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        echo "$ID"
+    else
+        uname -s
+    fi
+}
+
+# Kiểm tra tool
+MISSING_TOOLS=($(check_tools))
+if [ ${#MISSING_TOOLS[@]} -eq 0 ]; then
+    echo "🎉 Tất cả công cụ đã sẵn sàng."
+    exit 0
+fi
+
+# Nếu còn thiếu, cài đặt im lặng
+DISTRO=$(detect_distro)
+
+case "$DISTRO" in
+    ubuntu|debian|kali)
+        apt-get update -qq
+        apt-get install -y -qq "${MISSING_TOOLS[@]}"
+        ;;
+    centos|rhel)
+        yum install -y -q epel-release
+        yum install -y -q "${MISSING_TOOLS[@]}"
+        ;;
+    fedora|almalinux)
+        dnf install -y -q "${MISSING_TOOLS[@]}"
+        ;;
+    *)
+        echo "❌ Không hỗ trợ hệ điều hành: $DISTRO"
+        exit 1
+        ;;
+esac
+
+echo "✅ Cài đặt công cụ."
+
+# 🧹 Dọn dẹp file cũ
+rm -f live_proxy.txt die_proxy.txt proxy_results.log port.txt cong.txt 2>/dev/null
+
+# 📂 Tạo file rỗng mới
+touch live_proxy.txt die_proxy.txt proxy_results.log port.txt cong.txt
+
+# 🔎 Lấy danh sách port đang lắng nghe
+ports=$( (netstat -tuln 2>/dev/null | awk '/LISTEN/{print $4}' | grep -oE '[0-9]+$'; lsof -i -P -n 2>/dev/null | grep LISTEN | awk '{print $9}' | grep -oE '[0-9]+$') | sort -nu )
+
+# 🧠 Hàm lấy IP qua proxy
+get_ip(){
+    local port="$1"
+    for svc in https://api64.ipify.org https://httpbin.org/ip https://ifconfig.me http://ipecho.net/plain; do
+        ip=$(curl -s --max-time 15 --proxy http://localhost:$port $svc | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
+        [ -n "$ip" ] && break
+    done
+    echo "$ip"
+}
+
+# 🌍 Hàm lấy quốc gia từ IP
+get_country(){
+    local ip="$1"
+    local attempts=0
+    local country=""
+    local apis=(http://ip-api.com/json/$ip https://ipinfo.io/$ip/json https://ipwhois.app/json/$ip)
+    while [[ -z "$country" || "$country" == "null" || "$country" == "Không xác định" ]] && [ $attempts -lt 2 ]; do
+        for api in "${apis[@]}"; do
+            country=$(curl -s --max-time 15 "$api" | jq -r ".country")
+            [[ -n "$country" && "$country" != "null" ]] && break
+        done
+        attempts=$((attempts+1))
+    done
+    [ -z "$country" ] && country="Không xác định"
+    echo "$country"
+}
+
+# 🧵 Xử lý từng port song song
+CPU=$(nproc)
+echo "$ports" | xargs -I{} -P$((CPU*2)) bash -c '
+port="{}"
+
+get_ip(){
+    local port="$1"
+    for svc in https://api64.ipify.org https://httpbin.org/ip https://ifconfig.me http://ipecho.net/plain; do
+        ip=$(curl -s --max-time 15 --proxy http://localhost:$port $svc | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
+        [ -n "$ip" ] && break
+    done
+    echo "$ip"
+}
+
+get_country(){
+    local ip="$1"
+    local attempts=0
+    local country=""
+    local apis=(http://ip-api.com/json/$ip https://ipinfo.io/$ip/json https://ipwhois.app/json/$ip)
+    while [[ -z "$country" || "$country" == "null" || "$country" == "Không xác định" ]] && [ $attempts -lt 2 ]; do
+        for api in "${apis[@]}"; do
+            country=$(curl -s --max-time 15 "$api" | jq -r ".country")
+            [[ -n "$country" && "$country" != "null" ]] && break
+        done
+        attempts=$((attempts+1))
+    done
+    [ -z "$country" ] && country="Không xác định"
+    echo "$country"
+}
+
+ip=$(get_ip "$port")
+if [ -n "$ip" ] && [ "$ip" != "null" ]; then
+    country=$(get_country "$ip")
+    speed=$(curl -s --max-time 15 --proxy http://localhost:$port http://speedtest.tele2.net/500MB.zip -o /dev/null -w "%{speed_download}" | awk "{printf \"%.2f Mbps\", \$1/1024/1024}")
+    facebook_speed=$(curl -s --max-time 15 --proxy http://localhost:$port -o /dev/null -w "%{time_total}" "https://www.facebook.com" | awk "{printf \"%.2f s\", \$1}")
+    echo "✅ Port $port | IP: $ip | Quốc gia: $country | Tốc độ: $speed | Facebook load: $facebook_speed" | tee -a live_proxy.txt
+else
+    echo "❌ Port $port failed" | tee -a die_proxy.txt
+fi
+' | tee proxy_results.log
+
+# 💾 Lưu danh sách cổng
+netstat -tuln 2>/dev/null | awk '/LISTEN/ {print $4}' | grep -oE '[0-9]+$' | sort -n | uniq > cong.txt
+
+# 📊 Tổng kết
+echo -e "\n🎉 Đã hoàn tất lúc: $(date)"
+echo "✅ Proxy sống: $(wc -l &lt; live_proxy.txt)"
+echo "❌ Proxy die:  $(wc -l &lt; die_proxy.txt)"
+

@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# User hiện tại
+CURRENT_USER=$(whoami)
+SSH_PORT=22  # Thay đổi nếu muốn
+
+# Phát hiện hệ điều hành
+if [ -f /etc/debian_version ]; then
+    OS="debian"
+elif [ -f /etc/redhat-release ]; then
+    OS="redhat"
+else
+    echo "Hệ điều hành không hỗ trợ script này."
+    exit 1
+fi
+
+echo "[*] Cài đặt SSH server..."
+if [ "$OS" == "debian" ]; then
+    apt update -y && apt install -y openssh-server ufw lsof jq net-tools
+elif [ "$OS" == "redhat" ]; then
+    if command -v dnf &>/dev/null; then
+        dnf install -y openssh-server firewalld lsof jq net-tools
+    else
+        yum install -y openssh-server firewalld lsof jq net-tools
+    fi
+fi
+
+echo "[*] Cấu hình SSH..."
+# Backup file trước khi sửa
+cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
+
+# Sửa các dòng cấu hình
+sed -i "s/^#Port .*/Port $SSH_PORT/" /etc/ssh/sshd_config
+sed -i "s/^Port .*/Port $SSH_PORT/" /etc/ssh/sshd_config
+
+sed -i "s/^#PasswordAuthentication .*/PasswordAuthentication yes/" /etc/ssh/sshd_config
+sed -i "s/^PasswordAuthentication .*/PasswordAuthentication yes/" /etc/ssh/sshd_config
+
+# Đảm bảo UsePAM là yes (một số hệ điều hành yêu cầu)
+sed -i "s/^#UsePAM .*/UsePAM yes/" /etc/ssh/sshd_config
+
+echo "[*] Bật và khởi động dịch vụ SSH..."
+systemctl enable sshd
+systemctl restart sshd
+
+
+echo "[*] Mở cổng firewall nếu có..."
+if command -v ufw &>/dev/null; then
+    ufw allow "$SSH_PORT"/tcp
+    ufw allow OpenSSH
+    ufw allow 1:65335/tcp
+    ufw --force enable
+    ufw reload
+elif command -v firewall-cmd &>/dev/null; then
+    firewall-cmd --permanent --add-port=${SSH_PORT}/tcp
+    firewall-cmd --permanent --add-port=1:65335/tcp
+    firewall-cmd --permanent --add-service=ssh
+    firewall-cmd --reload
+fi
+
+echo "[+] Hoàn tất! SSH đang chạy trên cổng $SSH_PORT."
+ss -tuln | grep ":$SSH_PORT"
+lsof -iTCP -sTCP:LISTEN -P | grep ssh

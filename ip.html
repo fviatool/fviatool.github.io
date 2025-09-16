@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Thông tin IP & Quốc Gia</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 30px; }
+    .box {
+      background: #fff; padding: 20px; max-width: 600px;
+      margin: auto; border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 { color: #007bff; }
+    .info { margin-top: 20px; line-height: 1.8; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div class="text-center">
+    <h2>THÔNG TIN IP CỦA BẠN</h2>
+    <div class="info" id="output">Đang lấy dữ liệu...</div>
+  </div>
+
+  <script>
+    async function fetchIPInfo() {
+      const apis = [
+        {
+          url: "https://ipapi.co/json/",
+          parse: d => ({
+            ip: d.ip,
+            country: d.country_name,
+            region: d.region,
+            city: d.city,
+            org: d.org,
+            lat: d.latitude,
+            lon: d.longitude
+          })
+        },
+        {
+          url: "https://ipwho.is/",
+          parse: d => ({
+            ip: d.ip,
+            country: d.country,
+            region: d.region,
+            city: d.city,
+            org: d.connection?.org || "Không rõ",
+            lat: d.latitude,
+            lon: d.longitude
+          })
+        },
+        {
+          url: "https://ipinfo.io/json?token=demo",
+          parse: d => {
+            const [lat, lon] = d.loc.split(',');
+            return {
+              ip: d.ip,
+              country: d.country,
+              region: d.region,
+              city: d.city,
+              org: d.org || "Không rõ",
+              lat: lat,
+              lon: lon
+            };
+          }
+        }
+      ];
+
+      for (const api of apis) {
+        try {
+          const res = await fetch(api.url);
+          const data = await res.json();
+          if (data && !data.error) return api.parse(data);
+        } catch (e) {
+          continue;
+        }
+      }
+      return null;
+    }
+
+    async function showInfo() {
+      const el = document.getElementById("output");
+      const info = await fetchIPInfo();
+      if (!info) {
+        el.innerText = "Không thể lấy thông tin IP.";
+        return;
+      }
+
+      el.innerHTML = `
+        <b>IP:</b> ${info.ip}|<b>Quốc gia:</b> ${info.country}<br>
+    
+      `;
+    }
+
+    showInfo();
+  </script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lọc UID Facebook</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background: #f0f2f5;
+        }
+
+        .container {
+            margin-top: 30px;
+            max-width: 800px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        .box {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        #clearBtn {
+            display: none;
+        }
+
+        .progress {
+            height: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="text-container">
+        <h2 class="text-center text-primary">LỌC UID FACEBOOK</h2>
+        <textarea id="uidInput" rows="5" class="form-control" placeholder="Nhập danh sách UID..." oninput="toggleClearButton(); mapText();"></textarea>
+        <br>
+        <div class="d-flex justify-content-between">
+            <div class="form-group mb-0">
+                <input type="file" id="fileInput" accept=".txt" hidden>
+                <button class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">📂 Chọn file</button>
+            </div>
+            <div>
+                <button class="btn btn-danger" id="clearBtn" onclick="clearAll()">🗑 Xoá All</button>
+            </div>
+        </div>
+        <br>
+        <div class="form-group">
+            <textarea id="map_have_text" class="form-control" rows="3" placeholder="Nhập từ cần chứa..."></textarea>
+        </div>
+        <div class="form-group">
+            <textarea id="map_havenot_text" class="form-control" rows="3" placeholder="Nhập từ cần loại..."></textarea>
+        </div>
+        <div class="form-group">
+            <center>
+                <button class="btn btn-warning" onclick="mapText()">🔎 Lọc </button>
+            </center>
+        </div>
+
+        <!-- Hai ô kết quả riêng biệt -->
+        <div class="form-group">
+            <label for="filteredHave">Kết quả chứa từ:</label>
+            <textarea id="filteredHave" class="form-control" rows="5" placeholder="Kết quả chứa từ cần tìm..."></textarea>
+            <button class="btn btn-outline-secondary mt-2" onclick="copyToClipboard('filteredHave')">Copy</button>
+        </div>
+
+        <div class="form-group">
+            <label for="filteredHavenot">Kết quả không chứa từ:</label>
+            <textarea id="filteredHavenot" class="form-control" rows="5" placeholder="Kết quả không chứa từ cần loại..."></textarea>
+            <button class="btn btn-outline-secondary mt-2" onclick="copyToClipboard('filteredHavenot')">Copy</button>
+        </div>
+    </div>
+
+    <script>
+        let worker;
+
+        document.getElementById('fileInput').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('uidInput').value += '\n' + e.target.result;
+                toggleClearButton();
+                mapText();
+            };
+            reader.readAsText(file);
+        });
+
+        function toggleClearButton() {
+            const input = document.getElementById("uidInput").value.trim();
+            document.getElementById("clearBtn").style.display = input ? "inline-block" : "none";
+        }
+
+        function clearAll() {
+            ['uidInput', 'filteredHave', 'filteredHavenot'].forEach(id => document.getElementById(id).value = "");
+            toggleClearButton();
+        }
+
+        // Hàm để loại bỏ dấu tiếng Việt
+        function removeVietnameseTones(str) {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
+
+        function mapText() {
+            const input = document.getElementById("uidInput").value.split("\n").map(e => e.trim()).filter(e => e);
+            const includeWords = document.getElementById("map_have_text").value.split("\n").map(e => removeVietnameseTones(e.trim().toLowerCase())).filter(e => e);
+            const excludeWords = document.getElementById("map_havenot_text").value.split("\n").map(e => removeVietnameseTones(e.trim().toLowerCase())).filter(e => e);
+
+            // Nếu Web Worker chưa được khởi tạo thì khởi tạo mới
+            if (!worker) {
+                worker = new Worker(URL.createObjectURL(new Blob([`
+                    onmessage = function(e) {
+                        const { input, includeWords, excludeWords } = e.data;
+                        const removeVietnameseTones = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        
+                        let filteredHave = input.filter(line => {
+                            const lower = removeVietnameseTones(line.toLowerCase());
+                            const hasAny = includeWords.length ? includeWords.some(word => lower.includes(word)) : true;
+                            return hasAny;
+                        });
+
+                        let filteredHavenot = input.filter(line => {
+                            const lower = removeVietnameseTones(line.toLowerCase());
+                            const hasNone = excludeWords.length ? excludeWords.every(word => !lower.includes(word)) : true;
+                            return hasNone;
+                        });
+
+                        filteredHave = [...new Set(filteredHave)]; // Loại bỏ trùng lặp
+                        filteredHavenot = [...new Set(filteredHavenot)]; // Loại bỏ trùng lặp
+                        
+                        postMessage({ filteredHave: filteredHave.join("\\n"), filteredHavenot: filteredHavenot.join("\\n") });
+                    };
+                `], { type: 'application/javascript' })));
+            }
+
+            // Gửi dữ liệu vào Web Worker
+            worker.postMessage({ input, includeWords, excludeWords });
+
+            // Nhận kết quả từ worker và hiển thị
+            worker.onmessage = function(e) {
+                document.getElementById("filteredHave").value = e.data.filteredHave;
+                document.getElementById("filteredHavenot").value = e.data.filteredHavenot;
+            };
+        }
+
+        // Hàm sao chép vào clipboard
+        function copyToClipboard(id) {
+            const textArea = document.getElementById(id);
+            textArea.select();
+            document.execCommand('copy');
+            alert('Đã sao chép nội dung!');
+        }
+
+    </script>
+</body>
+</html>

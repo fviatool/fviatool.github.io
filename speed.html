@@ -1,0 +1,151 @@
+
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SpeedTest - Kiểm Tra Tốc Độ Mạng</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      padding: 30px;
+      margin: 0;
+      text-align: center;
+    }
+    .box {
+      background: white;
+      max-width: 600px;
+      margin: auto;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h1 { color: #007bff; margin-bottom: 20px; }
+    .result { font-size: 20px; margin: 10px 0; color: #333; }
+    .small { font-size: 14px; color: #777; }
+    button {
+      padding: 10px 25px;
+      font-size: 16px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+    button:hover { background: #218838; }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h1>Kiểm Tra Tốc Độ Mạng</h1>
+  <div class="result" id="ip">Đang xác định IP...</div>
+  <div class="result" id="location">Vị trí: ...</div>
+  <div class="result" id="download">Tải xuống: ...</div>
+  <div class="result" id="upload">Tải lên: ...</div>
+  <div class="result small" id="server">Máy chủ: ...</div>
+  <button onclick="startTest()">Kiểm tra lại</button>
+</div>
+
+<script>
+  const ipv4Servers = [
+    { name: "Netflix Singapore", url: "https://ipv4-c090-sin001-ix.1.oca.nflxvideo.net/speedtest" },
+    { name: "Netflix Hong Kong", url: "https://ipv4-c071-hkg001-ix.1.oca.nflxvideo.net/speedtest" },
+    { name: "Netflix Japan", url: "https://ipv4-c144-tyo001-ix.1.oca.nflxvideo.net/speedtest" }
+  ];
+  const ipv6Servers = [
+    { name: "Netflix Singapore IPv6", url: "https://ipv6-c074-sin001-ix.1.oca.nflxvideo.net/speedtest" },
+    { name: "Netflix Hong Kong IPv6", url: "https://ipv6-c050-hkg001-ix.1.oca.nflxvideo.net/speedtest" },
+    { name: "Netflix Japan IPv6", url: "https://ipv6-c132-tyo001-ix.1.oca.nflxvideo.net/speedtest" }
+  ];
+  const customServers = [
+    { name: "VIETTEL", url: "https://ipv4-c144-tyo001-ix.1.oca.nflxvideo.net/speedtest" },
+    { name: "VNPT", url: "https://ipv4-c097-sin001-ix.1.oca.nflxvideo.net/speedtest" },
+    { name: "FPT", url: "https://ipv4-c090-sin001-ix.1.oca.nflxvideo.net/speedtest" }
+  ];
+
+  function formatSpeed(mbps) {
+    const mb = parseFloat(mbps);
+    if (isNaN(mb)) return "0 MB/s";
+    const gb = mb / 1024;
+    return gb >= 1 ? `${mb.toFixed(2)} MB/s (${gb.toFixed(2)} GB/s)` : `${mb.toFixed(2)} MB/s`;
+  }
+
+  async function fetchIP() {
+    const apis = [
+      {
+        url: "https://ipapi.co/json/",
+        parse: d => ({ ip: d.ip, country: d.country_name, city: d.city })
+      },
+      {
+        url: "https://ipwho.is/",
+        parse: d => ({ ip: d.ip, country: d.country, city: d.city })
+      },
+      {
+        url: "https://ipinfo.io/json?token=demo",
+        parse: d => {
+          const [lat, lon] = (d.loc || ",").split(',');
+          return { ip: d.ip, country: d.country, city: d.city };
+        }
+      }
+    ];
+
+    for (const api of apis) {
+      try {
+        const res = await fetch(api.url);
+        const data = await res.json();
+        if (data && !data.error) {
+          const parsed = api.parse(data);
+          parsed.version = parsed.ip.includes(":") ? 6 : 4;
+          return parsed;
+        }
+      } catch {}
+    }
+    return { ip: "Không xác định", city: "?", country: "?", version: 4 };
+  }
+
+  async function measureSpeed(url) {
+    const start = performance.now();
+    try {
+      await fetch(url + '?r=' + Math.random(), {
+        method: 'GET',
+        mode: 'no-cors',
+        cache: 'no-store'
+      });
+      const end = performance.now();
+      const time = (end - start) / 10000;
+      const sizeMB = 5;
+      return (sizeMB / time).toFixed(2);
+    } catch {
+      return '0.00';
+    }
+  }
+
+  async function startTest() {
+    document.getElementById('ip').textContent = "Đang xác định IP...";
+    document.getElementById('location').textContent = "Vị trí: ...";
+    document.getElementById('download').textContent = "Đang đo tốc độ tải xuống...";
+    document.getElementById('upload').textContent = "Đang đo tốc độ tải lên...";
+    document.getElementById('server').textContent = "Đang chọn máy chủ...";
+
+    const info = await fetchIP();
+    document.getElementById('ip').textContent = `IP: ${info.ip}`;
+    document.getElementById('location').textContent = `Vị trí: ${info.city}, ${info.country}`;
+
+    const list = info.version === 6 ? ipv6Servers : ipv4Servers;
+    const serverList = [...customServers, ...list];
+    const server = serverList[Math.floor(Math.random() * serverList.length)];
+    document.getElementById('server').textContent = `Máy chủ: ${server.name}`;
+
+    const download = await measureSpeed(server.url);
+    document.getElementById('download').textContent = `Tải xuống: ${formatSpeed(download)}`;
+
+    const upload = await measureSpeed(server.url);
+    document.getElementById('upload').textContent = `Tải lên: ${formatSpeed(upload)}`;
+  }
+
+  window.onload = startTest;
+</script>
+
+</body>

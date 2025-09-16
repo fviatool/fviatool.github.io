@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lọc UID Facebook</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"/>
+  <style>
+    body { background: #f0f2f5; }
+    .container { margin-top: 30px; max-width: 800px; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1); }
+    textarea { resize: vertical; }
+    .section { margin-top: 20px; }
+    .label { font-weight: bold; margin-bottom: 5px; }
+    textarea[readonly] { background: #e9ecef; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2 class="text-center text-primary">LỌC UID FACEBOOK</h2>
+  <textarea id="uidInput" rows="6" class="form-control" placeholder="Nhập hoặc chọn file chứa UID..." oninput="autoFilterBM(); toggleClearButton();"></textarea>
+
+  <div class="d-flex justify-content-between mt-3">
+    <div>
+      <input type="file" id="fileInput" accept=".txt" hidden multiple />
+      <button class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">📂 Chọn file</button>
+    </div>
+    <button class="btn btn-danger" id="clearBtn" onclick="clearAll()" style="display:none">🗑 Xoá All</button>
+  </div>
+
+  <div class="form-group mt-3">
+    <label><input type="checkbox" id="filterBM5" checked> BM5</label>
+    <label><input type="checkbox" id="filterBM10" checked> BM10</label>
+    <label><input type="checkbox" id="filterBM3" checked> BM3</label>
+  </div>
+
+  <div class="result mt-2 d-flex justify-content-between">
+    <p>Số lượng BM5: <span id="countBM5">0</span></p>
+    <p>Số lượng BM10: <span id="countBM10">0</span></p>
+    <p>Số lượng BM3: <span id="countBM3">0</span></p>
+  </div>
+
+  <textarea id="bmOutput" class="form-control mt-2" rows="5" placeholder="Kết quả lọc BM..." readonly></textarea>
+  <button class="btn btn-outline-secondary mt-2" onclick="copyToClipboard('bmOutput')">📋 Copy tất cả BM</button>
+
+  <div class="section">
+    <div class="label">Kết quả BM10 (<span id="count10">0</span>):</div>
+    <textarea id="bm10" class="form-control" rows="3" readonly></textarea>
+    <button class="btn btn-sm btn-outline-primary mt-1" onclick="copyToClipboard('bm10')">Copy BM10</button>
+  </div>
+
+  <div class="section">
+    <div class="label">Kết quả BM5 (<span id="count5">0</span>):</div>
+    <textarea id="bm5" class="form-control" rows="3" readonly></textarea>
+    <button class="btn btn-sm btn-outline-primary mt-1" onclick="copyToClipboard('bm5')">Copy BM5</button>
+  </div>
+
+  <div class="section">
+    <div class="label">Kết quả BM3 (<span id="count3">0</span>):</div>
+    <textarea id="bm3" class="form-control" rows="3" readonly></textarea>
+    <button class="btn btn-sm btn-outline-primary mt-1" onclick="copyToClipboard('bm3')">Copy BM3</button>
+  </div>
+</div>
+
+<script>
+  function toggleClearButton() {
+    const val = document.getElementById("uidInput").value.trim();
+    document.getElementById("clearBtn").style.display = val ? "inline-block" : "none";
+  }
+
+  function clearAll() {
+    document.getElementById("uidInput").value = "";
+    document.getElementById("bmOutput").value = "";
+    document.getElementById("bm10").value = "";
+    document.getElementById("bm5").value = "";
+    document.getElementById("bm3").value = "";
+    document.getElementById("countBM5").textContent = "0";
+    document.getElementById("countBM10").textContent = "0";
+    document.getElementById("countBM3").textContent = "0";
+    document.getElementById("count10").textContent = "0";
+    document.getElementById("count5").textContent = "0";
+    document.getElementById("count3").textContent = "0";
+    toggleClearButton();
+  }
+
+  function copyToClipboard(id) {
+    const el = document.getElementById(id);
+    el.select();
+    document.execCommand("copy");
+  }
+
+  function autoFilterBM() {
+    const input = document.getElementById("uidInput").value.split("\n").map(e => e.trim()).filter(Boolean);
+    const unique = [...new Set(input)];
+    const bm5Checked = document.getElementById("filterBM5").checked;
+    const bm10Checked = document.getElementById("filterBM10").checked;
+    const bm3Checked = document.getElementById("filterBM3").checked;
+
+    const bm5List = [], bm10List = [], bm3List = [];
+
+    unique.forEach(line => {
+      if (bm5Checked && line.includes("BM5")) bm5List.push(line);
+      if (bm10Checked && line.includes("BM10")) bm10List.push(line);
+      if (bm3Checked && line.includes("BM3")) bm3List.push(line);
+    });
+
+    const allFiltered = [...bm5List, ...bm10List, ...bm3List];
+
+    document.getElementById("bmOutput").value = allFiltered.join("\n");
+    document.getElementById("countBM5").textContent = bm5List.length;
+    document.getElementById("countBM10").textContent = bm10List.length;
+    document.getElementById("countBM3").textContent = bm3List.length;
+
+    document.getElementById("bm10").value = bm10List.join("\n");
+    document.getElementById("bm5").value = bm5List.join("\n");
+    document.getElementById("bm3").value = bm3List.join("\n");
+
+    document.getElementById("count10").textContent = bm10List.length;
+    document.getElementById("count5").textContent = bm5List.length;
+    document.getElementById("count3").textContent = bm3List.length;
+  }
+
+  document.getElementById("fileInput").addEventListener("change", function () {
+    const files = this.files;
+    if (!files.length) return;
+
+    let allContent = "";
+    let loaded = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        allContent += e.target.result + "\n";
+        loaded++;
+        if (loaded === files.length) {
+          const textarea = document.getElementById("uidInput");
+          textarea.value += "\n" + allContent.trim();
+          autoFilterBM();
+          toggleClearButton();
+        }
+      };
+      reader.readAsText(files[i]);
+    }
+  });
+
+  window.onload = autoFilterBM;
+</script>
+</body>
+</html>
